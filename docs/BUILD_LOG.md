@@ -5,6 +5,20 @@ Only record results that were genuinely observed. Never record a planned step as
 
 ---
 
+## 2026-11-12: Session 3, implementation sprint (Testnet)
+
+- Testnet identities created + Friendbot-funded: opentab-admin/sender/merchant/merchant2/issuer (keys in CLI keystore outside repo).
+- Circle Testnet USDC not used (manual web faucet). Issued labelled demo asset **OTUSD** ("OpenTab Demo USD", no value); trustlines for sender + 2 merchants; 1,000 OTUSD to sender (balance read back `10000000000`); SAC `CC6JPD3N…PL73` deployed.
+- FamilyVault implemented (`contracts/family_vault`): `cargo test --locked` **34 passed**; `stellar contract build` -> 14,548 B WASM, hash `e3aac2d9…11190`.
+- Deployed `CAUCH3MNJGIYDLOY3OB3YCKRCBWWY3J3HZB5QCHPJXUWXBMK5IABYLGW`. CLI flow: family 1, deposit 100, key registered, **payment tx `0b8d72ed…bb05f` confirmed** (merchant 0 -> 54288817; family 1000000000 -> 945711183). Replay -> `Error(Contract, #4)`. Wrong merchant -> `Error(Crypto, InvalidInput)`. Merchant B payment `009cc536…80e5f3`.
+- `packages/shared` TS protocol: **13 vitest tests pass**; shared JS/Rust vector verified both sides. One test had a wrong byte offset (280 vs 284); test fixed, code unchanged.
+- `apps/web` Next.js 15.5.29 (15.5.4 flagged with a CVE by npm; upgraded): `tsc` clean, `next build` OK, client bundle scanned: no secrets.
+- `scripts/e2e-api.mts` against `next start`: **17/17 PASS** (family 2 created/funded, key registered, pay A `2c66e75f…eb4e`, replay rejected, cross-merchant rejected, pay B `29d15fc4…ac51`, overspend rejected, tamper rejected, exact balance).
+- `npm run dev` from repo root: `/`, `/sender`, `/family`, `/shop`, APIs return 200 with live chain data.
+- NOT done: browser click-through, physical phones, ESLint, GitHub push, Vercel, video, Devpost, Mode B.
+
+---
+
 ## 2026-11-12: Session 2, Milestone 0 (environment, docs, local Git)
 
 **Scope:** local only. No GitHub push, no Vercel, no Stellar identities, no deployments, no transactions.

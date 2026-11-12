@@ -4,7 +4,15 @@ The current to-do list between Claude Code sessions. Update at the end of every 
 Items marked **[USER]** need the user to do or approve something.
 
 **Hard deadline:** Devpost + one-page overview, Fri 13 Nov 2026, 08:30 EST.
-**Current milestone:** M1 -> M4, implement and deploy FamilyVault (see `docs/IMPLEMENTATION_PLAN.md` section 6).
+**Current milestone:** M5-M7 (UI verification on devices, Vercel, submission). M1-M4 DONE. See `docs/SESSION_HANDOFF.md`.
+
+## Before 08:30 EST Nov 13 (priority order)
+
+- [ ] Browser click-through of Sender -> Family -> Shop; fix UI bugs.
+- [ ] **[USER]** Add GitHub remote for `opentab` (`git remote add origin <url>`), push, make public when ready.
+- [ ] **[USER]** Vercel import (root `apps/web`), set env vars (server-only secrets!), confirm HTTPS URL.
+- [ ] Phone test over HTTPS: camera scan, airplane-mode signing, PWA install.
+- [ ] **[USER]** Record 1-minute video (`submission/DEMO_SCRIPT.md`), submit one-page overview + Devpost.
 
 ---
 
@@ -15,7 +23,7 @@ Items marked **[USER]** need the user to do or approve something.
 - [ ] **[USER]** Decide whether `references/` (organizer slides, internal decision PDFs) may be published. It is currently excluded by `.gitignore`.
 - [ ] **[USER]** Authorize M1 (create Testnet identities) when ready; then do the manual Circle Testnet USDC faucet step for the sender address.
 
-## Next development task: FamilyVault to first genuine Testnet payment
+## (Completed) FamilyVault to first genuine Testnet payment
 
 Implementation order (each step: code -> tests -> BUILD_LOG entry):
 
@@ -31,6 +39,8 @@ Implementation order (each step: code -> tests -> BUILD_LOG entry):
 Then M5 (PWA screens), M6 (Vercel), M7 (submission) per the plan.
 
 ## Done
+
+- [x] M1-M4 + app + e2e (2026-11-12, session 3; see BUILD_LOG).
 
 - [x] M0: `wasm32v1-none` installed; archive `cargo test --locked` 17/17, `npm test` 3/3, `stellar contract build` produced a 12,403-byte WASM; docs written; local Git commit (2026-11-12, see BUILD_LOG).
 - [x] Project is in `C:\Users\14168\dev\opentab-global` (not OneDrive).

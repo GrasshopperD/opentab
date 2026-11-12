@@ -1,5 +1,20 @@
 # Challenge submissions and show-day checklist
 
+## Status snapshot (2026-11-12, end of build session)
+
+| Item | Status |
+|---|---|
+| Testnet contract ID | DONE: `CAUCH3MNJGIYDLOY3OB3YCKRCBWWY3J3HZB5QCHPJXUWXBMK5IABYLGW` |
+| Verified transaction link | DONE: see `RELEASE_LINKS.md` |
+| One-page overview | DRAFTED: `ONE_PAGE_OVERVIEW.md` (submit via organizer channel) |
+| Trifold content | DRAFTED: `TRIFOLD_CONTENT.md` |
+| Pitch | DRAFTED: `PITCH.md` · Demo script: `DEMO_SCRIPT.md` · Devpost text: `DEVPOST_DRAFT.md` |
+| Public repo URL | NOT DONE: needs user to add remote, push, and make public |
+| Live demo URL (Vercel) | NOT DONE: needs user Vercel login + env vars |
+| Demo video | NOT DONE: must be recorded by the user with real footage |
+| Devpost entry + confirmation | NOT DONE |
+
+
 **External verification:** Official Devpost https://blockchain-stellar-ic.devpost.com/ . User-provided organizer Week 2 slide explicitly says `One Page Solution Overview DUE: Nov 13 | 8:30 AM Online` (see `references/Organizer_Week2_Deadline_Slide.jpg`). The actual one-page submission form/link must be confirmed from organizer Notion/team; do not assume uploading to Devpost fulfills it.
 
 ## Mandatory by Fri Nov 13 08:30 EST (Toronto)
