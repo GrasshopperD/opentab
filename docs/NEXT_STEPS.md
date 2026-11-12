@@ -21,7 +21,7 @@ Items marked **[USER]** need the user to do or approve something.
 - [ ] **[USER]** Confirm the Git author name/email for public commits before the first push (a global identity is configured; it was used for the local M0 commit). If a different identity or a GitHub noreply address is wanted, say so before pushing.
 - [ ] **[USER]** Provide the exact GitHub remote URL for the existing `opentab` repository (not guessed). Push only on explicit instruction.
 - [ ] **[USER]** Decide whether `references/` (organizer slides, internal decision PDFs) may be published. It is currently excluded by `.gitignore`.
-- [ ] **[USER]** Authorize M1 (create Testnet identities) when ready; then do the manual Circle Testnet USDC faucet step for the sender address.
+- [ ] **[USER]** Optional: switch from demo OTUSD to genuine Circle Testnet USDC (manual faucet step; requires redeploying FamilyVault with the USDC SAC).
 
 ## (Completed) FamilyVault to first genuine Testnet payment
 
