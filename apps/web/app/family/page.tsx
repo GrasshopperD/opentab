@@ -13,7 +13,7 @@ const SK = "opentab.family.sk", FAM = "opentab.family.id", NAME = "opentab.famil
 const get = (k: string) => { try { return localStorage.getItem(k) || ""; } catch { return ""; } };
 const set = (k: string, v: string) => { try { localStorage.setItem(k, v); } catch { /* storage blocked */ } };
 
-interface Hist { invoiceId: string; merchant: string; amount: string; local: string; at: number; status: "AUTHORIZED_LOCALLY" }
+interface Hist { invoiceId: string; familyId?: string; merchant: string; amount: string; local: string; at: number; status: "AUTHORIZED_LOCALLY"; settled?: boolean }
 
 export default function Family() {
   const [sk, setSk] = useState("");
@@ -35,6 +35,24 @@ export default function Family() {
   }, [fam, pub]);
   useEffect(() => { refresh(); }, [refresh]);
 
+  // When online, ask the chain whether each local approval has been settled by the shop.
+  const checkSettled = useCallback(async () => {
+    if (!navigator.onLine) return;
+    const pending = hist.filter((h) => !h.settled && h.familyId && /^[0-9a-f]{64}$/.test(h.invoiceId));
+    if (!pending.length) return;
+    const results = await Promise.all(pending.map((h) => api(`/api/invoice?family=${h.familyId}&id=${h.invoiceId}`)));
+    if (!results.some((r: any) => r.used === true)) return;
+    const used = new Set(pending.filter((_, i) => (results[i] as any).used === true).map((h) => h.invoiceId));
+    const nh = hist.map((h) => used.has(h.invoiceId) ? { ...h, settled: true } : h);
+    setHist(nh); set(HIST, JSON.stringify(nh));
+  }, [hist]);
+  useEffect(() => {
+    checkSettled();
+    const on = () => { refresh(); checkSettled(); };
+    window.addEventListener("online", on);
+    return () => window.removeEventListener("online", on);
+  }, [checkSettled, refresh]);
+
   function setup() {
     if (sk && !confirm("Replace this phone's key? Any family must re-authorize the new key.")) return;
     const k = toHex(generateSecretKey()); set(SK, k); setSk(k);
@@ -54,7 +72,7 @@ export default function Family() {
       // Signing happens locally. No network request is made here.
       const a = signInvoice(inv, BigInt(fam), fromHex(sk), BigInt(Math.floor(Date.now() / 1000)));
       setAuthQR(encodeAuthQR(a));
-      const h: Hist = { invoiceId: toHex(inv.invoiceId).slice(0, 12), merchant: inv.merchantName, amount: inv.amount.toString(),
+      const h: Hist = { invoiceId: toHex(inv.invoiceId), familyId: fam, merchant: inv.merchantName, amount: inv.amount.toString(),
         local: `${inv.quote.currency} ${formatLocal(inv.quote.localMinor, inv.quote.minorDigits)}`, at: Date.now(), status: "AUTHORIZED_LOCALLY" };
       const nh = [h, ...hist].slice(0, 20); setHist(nh); set(HIST, JSON.stringify(nh));
     } catch (e: any) { setErr(e.message); }
@@ -66,6 +84,10 @@ export default function Family() {
   return (
     <>
       <h1>Family wallet <Online /></h1>
+      <div className="stepper" aria-label="Setup progress">
+        <span className={sk ? "on" : ""} /><span className={sk && fam ? "on" : ""} /><span className={bal?.keyActive ? "on" : ""} />
+      </div>
+      <p className="muted">{!sk ? "Step 1 of 3: create your key" : !fam ? "Step 2 of 3: enter your family number" : !bal?.keyActive ? "Step 3 of 3: ask the sender to pair this phone" : "Ready to pay at participating shops"}</p>
       {!sk ? (
         <div className="card">
           <h2>Set up this phone</h2>
@@ -77,6 +99,7 @@ export default function Family() {
       ) : (
         <>
           <div className="card">
+            <h2>Spending allowance</h2>
             <p className="muted">Family #{fam || "?"} · {bal?.keyActive ? "this phone is authorized" : bal?.keyActive === false ? "this phone is NOT yet authorized" : "status needs connection"}</p>
             <div className="big">{bal?.balance ? formatTokenAmount(BigInt(bal.balance)) : "—"} <span className="muted">{TOKEN_CODE}</span></div>
             <p className="muted">Shared family balance on Stellar (last seen online). The chain decides what can be spent.</p>
@@ -87,6 +110,9 @@ export default function Family() {
 
           <div className="card">
             <h2>Pay at a shop</h2>
+            <p className="muted">Participating shops:</p>
+            <div className="shops">{MERCHANTS.map((m) => <span key={m.id}>{m.name}</span>)}</div>
+            <p className="hint">No internet needed. Your phone signs the exact amount for that one shop; the shop&apos;s connection settles it on Stellar.</p>
             <Scanner prompt="Scan shop invoice" onResult={onInvoice} />
             {err && <div className="status bad">{err}</div>}
             {inv && !authQR && (
@@ -126,7 +152,8 @@ export default function Family() {
             {!hist.length ? <p className="muted">None yet.</p> : (
               <ul className="list">{hist.map((h) => (
                 <li key={h.invoiceId + h.at}>{h.local} → {formatTokenAmount(BigInt(h.amount))} {TOKEN_CODE} at {h.merchant}<br />
-                  <span className="muted">Approved locally · settlement is confirmed by the shop on Stellar (see sender view)</span></li>
+                  {h.settled ? <span className="settled">✓ Settled on Stellar</span>
+                    : <span className="waiting">Approved on this phone · waiting for the shop to settle{h.familyId ? "" : " (older entry)"}</span>}</li>
               ))}</ul>
             )}
             <details><summary>Reset this phone</summary>

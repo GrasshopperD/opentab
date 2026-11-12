@@ -1,5 +1,5 @@
 "use client";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { fingerprint, formatTokenAmount, parsePairingQR, toHex } from "@opentab/shared";
 import { api, DemoAccess, ERROR_TEXT, Scanner, TxLink } from "../components";
 import { MERCHANTS, TOKEN_CODE } from "@/lib/config";
@@ -15,6 +15,9 @@ export default function Sender() {
   const [msg, setMsg] = useState<{ kind: string; text: string; hash?: string } | null>(null);
   const [amount, setAmount] = useState("10");
   const [pair, setPair] = useState<{ pub: string; label: string } | null>(null);
+
+  const lock = useRef(false); // synchronous guard: a double-click cannot send two transactions
+  const once = (f: () => Promise<void>) => async () => { if (lock.current) return; lock.current = true; try { await f(); } finally { lock.current = false; } };
 
   useEffect(() => { const f = load(); setFamilies(f); if (f.length) setFam(f[f.length - 1]); }, []);
   const refresh = useCallback(async () => {
@@ -61,10 +64,11 @@ export default function Sender() {
     <>
       <h1>Sender</h1>
       <DemoAccess />
-      <p className="muted">Demo sender: a Testnet account operated by this server holds {TOKEN_CODE} test tokens.</p>
+      <p className="lead">Fund your family&apos;s spending balance and pair their phone.</p>
+      <p className="muted">Demo sender: a Testnet account operated by this server holds {TOKEN_CODE} test tokens (no value).</p>
 
       <div className="card">
-        <h2>Family vault</h2>
+        <h2>1 · Create or choose a family</h2>
         <div className="row">
           <div><label>Family</label>
             <select value={fam} onChange={(e) => setFam(e.target.value)}>
@@ -74,10 +78,16 @@ export default function Sender() {
         </div>
         <label>Amount ({TOKEN_CODE}, max 50)</label>
         <input inputMode="decimal" value={amount} onChange={(e) => setAmount(e.target.value)} />
-        <button className="btn" disabled={!!busy} onClick={create}>{busy === "create" ? "Creating on Stellar…" : "Create new family + fund"}</button>
-        <button className="btn ghost" disabled={!!busy || !fam} onClick={deposit}>{busy === "deposit" ? "Depositing…" : "Top up selected family"}</button>
+        <button className="btn" disabled={!!busy} onClick={once(create)}>{busy === "create" ? "Creating on Stellar…" : "Create new family + fund"}</button>
+        <button className="btn ghost" disabled={!!busy || !fam} onClick={once(deposit)}>{busy === "deposit" ? "Depositing…" : "Top up selected family"}</button>
       </div>
 
+      {fam && (
+        <div className="famid" aria-live="polite">
+          <div className="num">#{fam}</div>
+          <div><b>Family number</b><br /><span className="muted">Give this number to your family member. They type it on the Family screen.</span></div>
+        </div>
+      )}
       {msg && <div className={"status " + msg.kind}>{msg.text}<br /><TxLink hash={msg.hash} /></div>}
 
       {f && (
@@ -95,7 +105,7 @@ export default function Sender() {
       {info?.error && <div className="status bad">{ERROR_TEXT[info.error] ?? info.error}</div>}
 
       <div className="card">
-        <h2>Pair a family member&apos;s phone</h2>
+        <h2>2 · Pair a family member&apos;s phone</h2>
         <p className="muted">On their phone open <b>Family</b> → it shows a pairing code containing only a public key. Scan it here.</p>
         <Scanner prompt="Scan pairing code" onResult={onPair} />
         {pair && (
@@ -103,14 +113,14 @@ export default function Sender() {
             <p>Device “{pair.label || "unnamed"}”, fingerprint</p>
             <p className="fp">{fingerprint(Uint8Array.from(pair.pub.match(/../g)!.map((h) => parseInt(h, 16))))}</p>
             <p className="muted">Check this matches the fingerprint on their phone. {info?.keyActive === true ? "Status: ACTIVE on chain." : info?.keyActive === false ? "Status: not active." : ""}</p>
-            <button className="btn" disabled={!!busy || !fam} onClick={() => keyAction("register")}>{busy === "register" ? "Registering…" : `Authorize for family #${fam || "?"}`}</button>
-            <button className="btn danger" disabled={!!busy || !fam} onClick={() => keyAction("revoke")}>Revoke</button>
+            <button className="btn" disabled={!!busy || !fam} onClick={once(() => keyAction("register"))}>{busy === "register" ? "Registering…" : `Authorize for family #${fam || "?"}`}</button>
+            <button className="btn danger" disabled={!!busy || !fam} onClick={once(() => keyAction("revoke"))}>Revoke</button>
           </>
         )}
       </div>
 
       <div className="card">
-        <h2>Purchases (confirmed on chain)</h2>
+        <h2>3 · Purchases confirmed on Stellar</h2>
         {!info?.payments?.length ? <p className="muted">No confirmed purchases in the recent event window.</p> : (
           <ul className="list">{info.payments.map((p: any) => (
             <li key={p.txHash + p.invoiceId}>{formatTokenAmount(BigInt(p.amount))} {TOKEN_CODE} at {name(p.merchant)} · terminal {p.terminalId}<br /><TxLink hash={p.txHash} /></li>

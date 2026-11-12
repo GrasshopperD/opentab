@@ -2,6 +2,12 @@
 import { expect, test, type BrowserContext, type Page } from "@playwright/test";
 
 const CODE = process.env.OT_DEMO_CODE ?? "";
+const SHOTS = "submission/screenshots";
+// Screenshots are taken only of real states; the access-code form is never visible in them.
+async function shot(page: Page, name: string) {
+  await expect(page.locator("#democode")).toHaveCount(0);
+  await page.screenshot({ path: `${SHOTS}/${name}.png`, fullPage: true });
+}
 
 async function unlock(page: Page) {
   await page.locator("#democode").fill(CODE);
@@ -26,6 +32,7 @@ test("full journey: fund, pair, offline approve, settle on Stellar, replay rejec
   await op.goto("/");
   await expect(op.getByRole("heading", { name: /Your support/ })).toBeVisible();
   await expect(op.getByText("STELLAR TESTNET DEMO")).toBeVisible();
+  await shot(op, "01-landing");
 
   // 2. Sender creates + funds a family (real transactions)
   await op.goto("/sender");
@@ -58,6 +65,7 @@ test("full journey: fund, pair, offline approve, settle on Stellar, replay rejec
   await op.getByRole("button", { name: "Top up selected family" }).click();
   await expect(op.getByText("Deposited 2 OTUSD")).toBeVisible({ timeout: 90_000 });
   expect(await familyBalance(operator, familyId)).toBe(50_000_000n);
+  await shot(op, "02-sender-dashboard");
 
   // Recipient sees the balance and authorization while online; let the service worker take control.
   await ph.locator('label:has-text("Family number") + input').fill(familyId);
@@ -66,6 +74,7 @@ test("full journey: fund, pair, offline approve, settle on Stellar, replay rejec
   await ph.getByRole("button", { name: "Refresh balance" }).click();
   await expect(ph.getByText("this phone is authorized")).toBeVisible();
   await expect(ph.locator(".big")).toContainText("5.00");
+  await shot(ph, "03-family-allowance");
 
   // 7-8. Merchant creates an invoice
   const shop = await operator.newPage();
@@ -76,6 +85,7 @@ test("full journey: fund, pair, offline approve, settle on Stellar, replay rejec
   await shop.getByRole("button", { name: "Show invoice QR" }).click();
   await expect(shop.locator(".qr img")).toBeVisible();
   const invoice = await shop.getByTestId("qr-text").first().inputValue();
+  await shot(shop, "04-shop-invoice");
   expect(invoice.startsWith("OTI1:")).toBe(true);
 
   // 9-10. Phone goes OFFLINE, imports invoice, signs locally
@@ -93,6 +103,7 @@ test("full journey: fund, pair, offline approve, settle on Stellar, replay rejec
   const auth = await ph.getByTestId("qr-text").first().inputValue();
   expect(auth.startsWith("OTA1:")).toBe(true);
   expect(offlineRequests.filter((u) => u.includes("/api/")), "no API calls while signing offline").toEqual([]);
+  await shot(ph, "05-family-offline-authorization");
 
   // Offline reload: the signing screen and key survive without network.
   await ph.reload();
@@ -105,9 +116,10 @@ test("full journey: fund, pair, offline approve, settle on Stellar, replay rejec
   await expect(shop.getByText(/NOT PAID until Stellar confirms/)).toBeVisible();
   await shop.getByRole("button", { name: "Submit to Stellar" }).dblclick();
   await expect(shop.getByText(/Payment confirmed on Stellar/)).toBeVisible({ timeout: 90_000 });
-  const href = await shop.locator(".status.ok a.txlink").getAttribute("href");
+  const href = await shop.locator(".success a.txlink").getAttribute("href");
   expect(href).toMatch(/stellar\.expert\/explorer\/testnet\/tx\/[0-9a-f]{64}$/);
   console.log("UI payment tx:", href);
+  await shot(shop, "06-shop-payment-confirmed");
 
   // 14-15. Balances moved by exactly the charge, once (double-click did not double charge)
   expect(await familyBalance(operator, familyId)).toBe(50_000_000n - 10_857_764n);
@@ -153,11 +165,11 @@ test("interactive screens require demo access", async ({ page }) => {
   await expect(page.getByText(/Demo access code required/)).toBeVisible();
 });
 
-for (const width of [390, 430]) {
+for (const width of [320, 375, 390, 430, 768, 1440]) {
   test(`mobile layout ${width}px has no horizontal overflow`, async ({ browser }) => {
     const ctx = await browser.newContext({ viewport: { width, height: 900 }, isMobile: true });
     const page = await ctx.newPage();
-    for (const path of ["/", "/sender", "/family", "/shop"]) {
+    for (const path of ["/", "/demo", "/sender", "/family", "/shop"]) {
       await page.goto(path);
       await page.waitForLoadState("networkidle");
       const overflow = await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth);

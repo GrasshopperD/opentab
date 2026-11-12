@@ -7,7 +7,8 @@ import {
 import { api, DemoAccess, ERROR_TEXT, QR, Scanner, TxLink } from "../components";
 import { DEMO_RATES, MERCHANTS, NETWORK_PASSPHRASE, RATE_SOURCE, TOKEN_CODE, TOKEN_ID, VAULT_ID } from "@/lib/config";
 
-const CUR = "opentab.shop.current"; // survives refresh so a pending payment can be reconciled
+const CUR = "opentab.shop.current";
+const merchantNameOf = (a: string) => MERCHANTS.find((m) => m.address === a)?.name ?? "this shop"; // survives refresh so a pending payment can be reconciled
 
 interface Current { merchantId: string; invoiceQR: string; authQR?: string; status: PaymentStatus; hash?: string; error?: string }
 
@@ -115,6 +116,7 @@ export default function Shop() {
   return (
     <>
       <h1>Shop checkout</h1>
+      <p className="lead">Price in local currency. The customer approves on their phone; you get paid on Stellar.</p>
       <DemoAccess />
       <div className="card">
         <div className="row">
@@ -169,7 +171,14 @@ export default function Shop() {
           )}
           {c.status === "CONFIRMED" && (
             <>
-              <div className="status ok">✓ Payment confirmed on Stellar. {formatTokenAmount(inv.amount, 7)} {TOKEN_CODE} received.<br /><TxLink hash={c.hash} /></div>
+              <div className="success" role="status">
+                <div className="tick" aria-hidden>✓</div>
+                <div><b>Payment confirmed on Stellar.</b></div>
+                <div className="amt">{formatTokenAmount(inv.amount, 7)} {TOKEN_CODE}</div>
+                <div>for {inv.quote.currency} {formatLocal(inv.quote.localMinor, inv.quote.minorDigits)} at {merchantNameOf(inv.merchant)} · terminal {inv.terminalId}</div>
+                <TxLink hash={c.hash} />
+              </div>
+              <p className="muted">You may hand over the goods.</p>
               <button className="btn danger small" onClick={() => submit(true)}>Replay test: try to charge again</button>
             </>
           )}

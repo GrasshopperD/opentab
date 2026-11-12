@@ -1,7 +1,7 @@
 // OpenTab service worker: offline app shell for the family signing screen.
 // Never caches /api responses (balances and payments must come from the chain).
-const CACHE = "opentab-v1";
-const SHELL = ["/", "/family", "/shop", "/sender", "/manifest.webmanifest", "/icon.svg"];
+const CACHE = "opentab-v2";
+const SHELL = ["/", "/family", "/shop", "/sender", "/demo", "/manifest.webmanifest", "/icon.svg"];
 self.addEventListener("install", (e) => { e.waitUntil(caches.open(CACHE).then((c) => c.addAll(SHELL)).then(() => self.skipWaiting())); });
 self.addEventListener("activate", (e) => {
   e.waitUntil(caches.keys().then((ks) => Promise.all(ks.filter((k) => k !== CACHE).map((k) => caches.delete(k)))).then(() => self.clients.claim()));

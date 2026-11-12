@@ -19,7 +19,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <div className="banner">STELLAR TESTNET DEMO · Demo USD has no monetary value · Not a licensed financial service</div>
         <header className="top">
           <Link href="/" className="brand"><span className="logo">◐</span> OpenTab Global</Link>
-          <nav><Link href="/sender">Sender</Link><Link href="/family">Family</Link><Link href="/shop">Shop</Link></nav>
+          <nav aria-label="Main"><Link href="/demo">Demo</Link><Link href="/sender">Sender</Link><Link href="/family">Family</Link><Link href="/shop">Shop</Link></nav>
         </header>
         <main className="wrap">{children}</main>
         <SWRegister />
