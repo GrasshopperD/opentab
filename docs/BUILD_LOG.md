@@ -5,6 +5,19 @@ Only record results that were genuinely observed. Never record a planned step as
 
 ---
 
+## 2026-11-12: Session 4, browser testing, security hardening, release prep
+
+- **Security (new):** `apps/web/lib/guard.server.ts`. Server-only `DEMO_ACCESS_CODE` -> `/api/auth/login` -> HMAC-signed HttpOnly SameSite=Strict cookie (8 h). All 4 signing routes (`sender/family`, `sender/deposit`, `sender/key`, `merchant/pay`) require session + same Origin + JSON + body <= 4 KB + per-route per-IP rate limit. Fails closed if access env is missing. Public GET routes rate limited (120/min/IP). Protocol parse errors now 400 (were 500).
+- **Reliability:** shop submit has a synchronous lock (double-click), client-side + server-side expiry pre-check, server in-flight lock per invoice, network errors -> `UNKNOWN` (never FAILED/PAID), reconciliation by tx hash then by on-chain `is_invoice_used` (new public `/api/invoice`), safe retry of the SAME approval only. Status machine: `UNKNOWN -> AUTHORIZED_LOCALLY` allowed (tested).
+- **Bug found by browser review:** payment history empty. Cause: Testnet RPC `getEvents` scans a bounded ledger range per call and returned 0 events + cursor for a 17,000-ledger window. Fixed by following the cursor (max 5 pages). Verified by Playwright assertion (merchant history + sender purchase list show the new tx).
+- **UI fixes:** kv values broke mid-word on mobile; doubled card spacing on landing page. QR component now has a visible "Show code as text" fallback (clipboard can fail on HTTP).
+- **Dependencies:** `npm audit fix` resolved `sharp` (high). Remaining: `postcss` via `next` (moderate/high); fix requires Next 16 (major); it processes only our own CSS at build time; deferred and documented.
+- **Results (all against `next start`, real Testnet):** `cargo test --locked` 34/34 · `npm test` 13/13 · `tsc --noEmit` clean · `next build` OK · `scripts/e2e-api.mts` 18/18 · `scripts/security-api.mts` 18/18 · Playwright 5/5 (full journey with phone context offline while signing, zero `/api` requests during signing, offline reload keeps key, double-click charges once, replay rejected, malformed codes, access gate, 390/430 px no overflow). Secrets and access code not found in `.next/static` or rendered HTML.
+- Stale `next start` processes from earlier sessions were holding port 3000; stopped (they were this project's own servers).
+- NOT done: physical phones, camera scanning, PWA install prompt, GitHub push, Vercel deploy, video, Devpost.
+
+---
+
 ## 2026-11-12: Session 3, implementation sprint (Testnet)
 
 - Testnet identities created + Friendbot-funded: opentab-admin/sender/merchant/merchant2/issuer (keys in CLI keystore outside repo).

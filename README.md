@@ -26,9 +26,10 @@ credit (*fiado*) and carry the risk.
 | Real QR-style signed payment, merchant receives tokens | **Confirmed on chain** | tx [`0b8d72ed…bb05f`](https://stellar.expert/explorer/testnet/tx/0b8d72ed8e267ca31f2fe7179f5afbdcb7586e2c887c18a90a7d2c3b63bbb05f) |
 | Same family balance spent at a second shop | **Confirmed on chain** | tx [`009cc536…80e5f3`](https://stellar.expert/explorer/testnet/tx/009cc536cc3d8c88445b4a07b5d6de0189b843544c0d3ce9a57bddf87280e5f3) |
 | Replaying the same approval | **Rejected by contract** (`InvoiceUsed`) | `submission/RELEASE_LINKS.md` |
-| Web app: Sender, Family, Shop screens wired to the contract | **Works locally**, real Testnet txs | `scripts/e2e-api.mts` 17/17 pass |
-| Recipient signing with no network call | Implemented (pure local Ed25519); **physical airplane-mode test pending** | `apps/web/app/family/page.tsx` |
-| Installable PWA + offline shell | Implemented; **not yet verified on a physical phone** | `apps/web/public/sw.js` |
+| Web app: Sender, Family, Shop screens wired to the contract | **Works locally**, real Testnet txs | Playwright browser journey 5/5 (UI payment tx [`e42405a8…11d4`](https://stellar.expert/explorer/testnet/tx/e42405a85a595d7a9bc347d1f4fa09b2364a76043984746e6ed9a7f8e98811d4)); API e2e 18/18 |
+| Demo access control on every signing endpoint | **Implemented and tested** | `scripts/security-api.mts` 18/18 |
+| Recipient signing with no network call | **Verified in emulated-offline Chromium** (zero API requests while signing; offline reload works); **physical phone test pending** | `tests/e2e/checkout.spec.ts` |
+| Installable PWA + offline shell | Service worker verified in Chromium; **install + camera scan not yet verified on a physical phone** | `apps/web/public/sw.js` |
 | Both shop and customer offline (merchant-reserved channel) | **Planned** (design done, legacy prototype archived) | `docs/IMPLEMENTATION_PLAN.md` |
 | Local bank payouts (MXN, BRL, …) | **Not available** | needs a licensed provider |
 
@@ -80,7 +81,8 @@ cd opentab-global
 npm install
 copy .env.example apps\web\.env.local     # macOS/Linux: cp .env.example apps/web/.env.local
 # Fill SENDER_SECRET, MERCHANT_A_SECRET, MERCHANT_B_SECRET with YOUR OWN Testnet identities
-# (stellar keys generate ... --fund, then add OTUSD trustlines; see docs/SESSION_HANDOFF.md).
+# (stellar keys generate ... --fund, then add OTUSD trustlines; see docs/SESSION_HANDOFF.md),
+# and set DEMO_ACCESS_CODE (>= 8 chars) + DEMO_SESSION_SECRET (>= 32 random chars).
 npm run dev                                # http://localhost:3000
 ```
 
@@ -91,11 +93,40 @@ cargo test --locked          # 34 contract tests
 stellar contract build       # target/wasm32v1-none/release/family_vault.wasm
 npm test                     # 13 TypeScript protocol tests
 npm run build                # production Next.js build
-# With the app running: real Testnet end-to-end (spends demo tokens)
-node --experimental-strip-types scripts/e2e-api.mts http://localhost:3000
+# With the app running (npm run build && npm run start), using real Testnet (spends demo tokens):
+$env:OT_DEMO_CODE="<your access code>"     # bash: export OT_DEMO_CODE=...
+npm run test:api                           # 18 live API checks
+npm run test:security                      # 18 access-control / CSRF / input-limit checks
+npx playwright install chromium; npm run test:e2e   # 5 real-browser tests
 ```
 
 Without the server-side secrets the app clearly reports `NOT_CONFIGURED` instead of showing invented balances.
+
+## Environment variables
+
+| Variable | Visibility | Purpose |
+|---|---|---|
+| `NEXT_PUBLIC_STELLAR_RPC_URL`, `NEXT_PUBLIC_STELLAR_NETWORK_PASSPHRASE` | public | Testnet RPC and network |
+| `NEXT_PUBLIC_FAMILY_VAULT_CONTRACT_ID`, `NEXT_PUBLIC_TOKEN_CONTRACT_ID`, `NEXT_PUBLIC_TOKEN_CODE`, `NEXT_PUBLIC_TOKEN_LABEL`, `NEXT_PUBLIC_TOKEN_ISSUER` | public | contract + demo asset identity |
+| `NEXT_PUBLIC_MERCHANT_A_ADDRESS`, `NEXT_PUBLIC_MERCHANT_B_ADDRESS` | public | demo shop accounts |
+| `SENDER_SECRET`, `MERCHANT_A_SECRET`, `MERCHANT_B_SECRET` | **server-only** | Testnet demo signers (never prefix with `NEXT_PUBLIC_`) |
+| `DEMO_ACCESS_CODE`, `DEMO_SESSION_SECRET` | **server-only** | demo operator access; if missing, all signing endpoints are disabled |
+
+## Demo access (for judges and demonstrators)
+
+The landing page, the Family screen and all on-chain evidence are public. The **Sender** and **Shop** screens spend from
+server-held Testnet demo accounts, so they ask for a **demo access code** (shared privately with judges). The code is
+exchanged for an HttpOnly, SameSite=Strict session cookie (8 h). Every signing endpoint also requires a same-origin JSON
+request, enforces body-size and amount limits, and is rate limited per IP (best effort, per server instance).
+
+## Deploy to Vercel
+
+1. Vercel → Add New Project → import the GitHub repo.
+2. **Root Directory: `apps/web`** (leave "Include files outside the root directory" enabled; the app imports `packages/shared`).
+3. Framework preset: Next.js. Install/build commands: defaults (npm detects the workspace lockfile at the repo root).
+4. Add every variable from the table above (secrets as plain server env vars, Production + Preview).
+5. Deploy, then open the URL in a private window: `/` loads, `/sender` asks for the access code, `/api/auth/status`
+   returns `"enabled": true`.
 
 ## Security model and limitations (honest)
 
@@ -103,11 +134,12 @@ Without the server-side secrets the app clearly reports `NOT_CONFIGURED` instead
 - The **recipient private key is generated in the browser and stored in `localStorage`**. It never leaves the phone,
   but browser storage is not production custody; there is no recovery. Production needs non-extractable keys / passkeys.
 - **Sender and shop are demo Testnet identities operated by the server** (secrets in server-only env vars, never in the
-  client bundle; checked by scanning the build). Anyone using the public demo acts as these demo identities.
+  client bundle; checked by scanning the build). Only holders of the demo access code can operate them.
 - Contract-level guarantees are enforced on chain; the server pre-checks only for better error messages.
 - Merchant address and amount are public on chain. No item lists are stored.
 - Payment history in the UI comes from recent RPC events (limited retention window).
-- No rate limiting or abuse controls on the demo API. Unaudited contract.
+- Rate limits are in-memory per serverless instance (best effort, not a global quota). Unaudited contract.
+- `npm audit`: remaining advisories are in PostCSS used by Next.js at build time on our own CSS; the fix requires a Next 16 major upgrade, deferred until after the deadline.
 
 ## Roadmap
 

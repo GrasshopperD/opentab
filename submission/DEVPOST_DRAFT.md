@@ -18,8 +18,7 @@ multiple shops; replays and overspends are rejected by the contract.
   Direct Ed25519 verification of a 340-byte canonical message binding network, contract, token, family, signer, merchant,
   terminal, invoice, amount, quote hash and expiry. Persistent replay records with TTL management.
 - **Protocol package:** TypeScript (@noble/curves), browser-safe, cross-checked against Rust with a shared test vector.
-- **App:** Next.js 15 installable PWA with Sender, Family and Shop screens; QR generation and camera scanning (jsQR) with
-  paste fallback; service worker for an offline signing screen; server-only Testnet relay for the demo sender and shops.
+- **App:** Next.js 15 installable PWA with Sender, Family and Shop screens; QR generation and camera scanning (jsQR; not yet verified on a physical phone) with paste fallback; service worker for an offline signing screen; server-only Testnet relay for the demo sender and shops, protected by a demo access code (HttpOnly session cookie, same-origin checks, rate limits).
 - **Asset:** OpenTab Demo USD (OTUSD), a Testnet classic asset wrapped by a Stellar Asset Contract. Not USDC, no value.
 
 ## Challenges
@@ -27,8 +26,7 @@ Designing a signing format that is identical in the browser and in the contract;
 "pending/unknown" and reconciled rather than retried as a new charge; keeping every secret off the client.
 
 ## Accomplishments
-Real Testnet payments at two different shops from one family balance, a replayed approval rejected on chain, and 34 + 13
-automated tests plus a 17-step live end-to-end test passing. Evidence: `submission/RELEASE_LINKS.md`.
+Real Testnet payments at two different shops from one family balance, a replayed approval rejected by the deployed contract, and 34 contract tests, 13 protocol tests, an 18-check live API test, 18 security checks and 5 real-browser tests (including signing in an emulated offline browser). Evidence: `submission/RELEASE_LINKS.md`.
 
 ## What we learned
 On-chain rules make offline approval safe only when the shop is online; when both sides are offline you need funds

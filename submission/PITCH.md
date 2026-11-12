@@ -12,15 +12,14 @@ The sender funds the balance. The family member pays by scanning the shop's QR c
 phone does not need internet to do that. The shop is online; it submits the approval to Stellar and gets paid in seconds.
 
 **(1:00) Demo.** *[play the one-minute video]*
-You just saw a real Stellar Testnet transaction: the phone in airplane mode signed the exact shop, amount and invoice; the
+*(Say "in airplane mode" only if the video visibly shows it.)* You just saw a real Stellar Testnet transaction: the phone, with no connection, signed the exact shop, amount and invoice; the
 contract checked it and paid the shop; and when we tried to charge the same approval again, the contract refused.
 
 **(2:00) Why this is credible.**
 The rules live in a Soroban smart contract, not on our server. Every approval is bound to the Stellar network, this
 contract, the token, the family, the shop, the terminal, the invoice, the amount and an expiry. Each invoice can be paid
 once. One family balance works across many shops, and two shops can never together spend more than is there. The family
-member needs no crypto account and no XLM. We have 34 contract tests, a cross-checked browser-to-contract signing format,
-and a live end-to-end test that runs against Testnet.
+member needs no crypto account and no XLM. We have 34 contract tests, a signing format cross-checked between browser and contract, and live API and browser tests that run real payments on Testnet.
 
 **(2:25) Business and roadmap.**
 Shops get paid with certainty instead of carrying informal credit, and senders know their support goes to everyday needs.

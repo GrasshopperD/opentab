@@ -8,10 +8,12 @@ Items marked **[USER]** need the user to do or approve something.
 
 ## Before 08:30 EST Nov 13 (priority order)
 
-- [ ] Browser click-through of Sender -> Family -> Shop; fix UI bugs.
-- [ ] **[USER]** Add GitHub remote for `opentab` (`git remote add origin <url>`), push, make public when ready.
-- [ ] **[USER]** Vercel import (root `apps/web`), set env vars (server-only secrets!), confirm HTTPS URL.
-- [ ] Phone test over HTTPS: camera scan, airplane-mode signing, PWA install.
+- [x] Browser click-through of Sender -> Family -> Shop (Playwright, real Testnet, 5/5) and UI fixes (session 4).
+- [x] Demo access control + CSRF/rate/input limits on all signing endpoints (session 4, 18/18 checks).
+- [ ] **[USER]** Add GitHub remote for `opentab`, push (`docs/SESSION_HANDOFF.md` -> "Push to GitHub"). Make public when ready to submit.
+- [ ] **[USER]** Vercel import (root `apps/web`), set env vars incl. `DEMO_ACCESS_CODE` / `DEMO_SESSION_SECRET` (server-only).
+- [ ] Re-run `scripts/security-api.mts` and Playwright against the Vercel URL.
+- [ ] **[USER]** Manual phone test (procedure in `docs/SESSION_HANDOFF.md`): camera, airplane mode, PWA install.
 - [ ] **[USER]** Record 1-minute video (`submission/DEMO_SCRIPT.md`), submit one-page overview + Devpost.
 
 ---

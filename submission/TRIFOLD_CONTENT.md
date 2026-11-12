@@ -28,8 +28,8 @@ Asset Contract (demo USD) → shop account.
 
 **Technical validation (real, Testnet):**
 - Contract `CAUCH3MN…ABYLGW` deployed; payments confirmed at two shops from one balance.
-- Replay of the same approval rejected on chain (`InvoiceUsed`); overspend rejected.
-- 34 contract tests · 13 protocol tests · 17-step live end-to-end test.
+- Replay of the same approval rejected by the deployed contract (`InvoiceUsed`); overspend rejected.
+- 34 contract tests · 13 protocol tests · 18 live API checks · 18 security checks · 5 browser tests.
 - Same signing bytes verified in browser code and in Rust.
 
 **Roadmap:** both-offline shop channels with reserved funds → real USDC → licensed local payouts → audit and pilots.

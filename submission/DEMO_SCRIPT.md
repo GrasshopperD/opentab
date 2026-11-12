@@ -1,6 +1,6 @@
 # One-minute demo script (real footage only)
 
-**Setup before recording:** app running (local or Vercel) on a laptop (= shop, online) and a phone (= family).
+**Setup before recording:** unlock Sender and Shop with the demo access code (server env `DEMO_ACCESS_CODE`). App running (local or Vercel) on a laptop (= shop, online) and a phone (= family).
 On the phone, open `/family` once while online, create the key, enter the family number, and make sure the sender has
 authorized it (Sender → scan pairing code → Authorize). Have Stellar Expert open in a tab.
 

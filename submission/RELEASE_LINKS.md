@@ -23,6 +23,9 @@ Never invent IDs, URLs or hashes. Explorer: `https://stellar.expert/explorer/tes
 | Replay of payment #1 (same auth + signature) | Rejected at simulation: `HostError: Error(Contract, #4)` = `InvoiceUsed`. Merchant balance unchanged at `54288817` | 2026-11-12 | REJECTED (as intended) |
 | Wrong merchant (Merchant B submits #1's signature with merchant swapped, fresh invoice id) | Rejected: `Error(Crypto, InvalidInput)` (signature does not verify) | 2026-11-12 | REJECTED (as intended) |
 | **Signed payment #2, same family balance, Merchant B** (MXN 50.00 -> 2.7144409 OTUSD, terminal 7) | tx `009cc536cc3d8c88445b4a07b5d6de0189b843544c0d3ce9a57bddf87280e5f3`; Merchant B `27144409`; family `918566774` | 2026-11-12 | CONFIRMED |
+| App API e2e run #1 (family 2) | pay A `2c66e75f9e9401fa6505dba5278e0877c797dbe87bc8ee418c1000254a08eb4e`, pay B `29d15fc4611fefc37d0a7a5f8243973dba91e431315aad2387f4f62a39b5ac51` | 2026-11-12 | CONFIRMED |
+| App API e2e run #2 with access control (family 4) | pay A `755c67044983d335ae0987014ef51325da6ca4fd5a7c171504c18d99aa5da098`, pay B `a7d217f2cbd98dc94daad6b7f9eecc689a55c7a1fc19d9662582c8f8ef711517`; replay -> InvoiceUsed; overspend -> InsufficientFunds | 2026-11-12 | CONFIRMED |
+| **Browser UI payment (Playwright, phone context offline while signing)** | `336b9c43392f6fcd87532328805fbe68859be2a6d6cb09e0d97d52bc44d84f65` (run 1), **`e42405a85a595d7a9bc347d1f4fa09b2364a76043984746e6ed9a7f8e98811d4`** (run 2): MXN 20.00 -> 1.0857764 OTUSD; family and merchant balances changed by exactly that amount once despite a double-click; replay button -> rejected | 2026-11-12 | CONFIRMED |
 | Overspend / expired / invalid signature | Covered by Rust unit tests (34 passing), not run on chain | 2026-11-12 | LOCAL TESTS |
 | One-minute demonstration video URL | `TBD` | - | NOT RECORDED |
 | Devpost submission URL + confirmation | `TBD` | - | NOT SUBMITTED |

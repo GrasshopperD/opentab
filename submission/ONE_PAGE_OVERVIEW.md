@@ -23,12 +23,11 @@ account or XLM; Stellar's anchor ecosystem is the path to regulated cash-out.
 
 **What the prototype demonstrates (Testnet, verifiable).** Deployed FamilyVault contract
 `CAUCH3MNJGIYDLOY3OB3YCKRCBWWY3J3HZB5QCHPJXUWXBMK5IABYLGW`; real signed payments to two different shops from one family
-balance; the same approval replayed and rejected by the contract; overspend rejected; 34 contract tests, 13 protocol tests
-and a 17-step live end-to-end test passing. Settlement token is a clearly labelled demo asset (OTUSD), not USDC.
+balance; the same approval replayed and rejected by the contract; overspend rejected; 34 contract tests, 13 protocol tests, an 18-check live API test, 18 security checks and 5 real-browser tests (including signing in an emulated offline browser) passing. Settlement token is a clearly labelled demo asset (OTUSD), not USDC.
 
 **Technical components.** Rust/Soroban contract · TypeScript protocol package shared by browser and tests (340-byte
 canonical message, cross-checked against Rust) · Next.js installable PWA with Sender, Family and Shop screens, QR
-generation and camera scanning with paste fallback · server-only Testnet relay for demo accounts.
+generation and camera scanning (not yet verified on a physical phone) with paste fallback · server-only Testnet relay for demo accounts.
 
 **How it differs.** Unlike a remittance app, money is spendable at the shop without a cash pickup. Unlike a gift card, one
 balance works across many independent shops, every rule is enforced by a public contract, and payments settle on chain.
