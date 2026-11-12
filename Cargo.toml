@@ -1,6 +1,6 @@
 [workspace]
 resolver = "2"
-members = ["contracts/family_vault"]
+members = ["contracts/family_vault", "contracts/offline_channel"]
 
 [workspace.dependencies]
 soroban-sdk = "29.0.1"
