@@ -64,6 +64,29 @@ export interface Quote {
   minorDigits: number;   // 2 for MXN
   rate: string;          // local units per 1 token unit, decimal string, e.g. "18.4200"
   source: string;        // e.g. "ILLUSTRATIVE" (never "live" unless it is)
+  /** Optional itemization. When present it is bound into quoteHash (so it is covered by the phone's signature)
+   *  and must sum exactly to localMinor. Absent = hash identical to the original OTQ1 format. */
+  items?: LineItem[];
+}
+
+export interface LineItem {
+  name: string;          // [A-Za-z0-9 ] only, 1-24 chars (no separator characters, unambiguous canonical form)
+  qty: number;           // integer 1..99
+  unitMinor: bigint;     // unit price in the quote currency's minor units
+}
+export const MAX_LINE_ITEMS = 10;
+
+export function validateItems(q: Quote): void {
+  if (q.items === undefined) return;
+  if (!Array.isArray(q.items) || q.items.length < 1 || q.items.length > MAX_LINE_ITEMS) throw new ProtocolError("bad line items");
+  let sum = 0n;
+  for (const it of q.items) {
+    if (typeof it.name !== "string" || !/^[A-Za-z0-9 ]{1,24}$/.test(it.name)) throw new ProtocolError("bad item name");
+    if (!Number.isInteger(it.qty) || it.qty < 1 || it.qty > 99) throw new ProtocolError("bad item quantity");
+    if (typeof it.unitMinor !== "bigint" || it.unitMinor <= 0n) throw new ProtocolError("bad item price");
+    sum += it.unitMinor * BigInt(it.qty);
+  }
+  if (sum !== q.localMinor) throw new ProtocolError("items do not add up to the price");
 }
 
 /** Created by the merchant terminal; contains only public data. */
@@ -98,7 +121,11 @@ export interface PaymentFields {
 export const networkId = (passphrase: string) => sha256(utf8(passphrase));
 
 export function quoteHash(q: Quote, amount: bigint): Uint8Array {
-  const s = `OTQ1|${q.currency}|${q.localMinor}|${q.minorDigits}|${q.rate}|${q.source}|${amount}`;
+  let s = `OTQ1|${q.currency}|${q.localMinor}|${q.minorDigits}|${q.rate}|${q.source}|${amount}`;
+  if (q.items !== undefined) {
+    validateItems(q);
+    s += "|L|" + q.items.map((i) => `${i.name}*${i.qty}*${i.unitMinor}`).join(";");
+  }
   return sha256(utf8(s));
 }
 
@@ -124,6 +151,24 @@ export function fieldsFor(inv: Invoice, familyId: bigint, signer: Uint8Array): P
   };
 }
 
+// ---------- invitation proof of possession ----------
+/** What a recipient phone signs to prove it holds the private key for `pub` when accepting an invitation.
+ *  Domain-separated from payments: starts with "OTINV1|" (payment messages are 340 binary bytes starting "OTFV1\0\0\0"),
+ *  so this signature can never be a valid payment authorization. `challenge` is server-random and single-use. */
+export interface PossessionFields { network: string; vault: string; inviteId: string; familyId: bigint; challenge: string; pub: Uint8Array }
+export function possessionMessage(f: PossessionFields): Uint8Array {
+  if (!/^[A-Za-z0-9_-]{16,64}$/.test(f.inviteId) || !/^[A-Za-z0-9_-]{32,64}$/.test(f.challenge)) throw new ProtocolError("bad invite fields");
+  strkey(f.vault);
+  return utf8(`OTINV1|${toHex(networkId(f.network))}|${f.vault}|${f.inviteId}|${f.familyId}|${f.challenge}|${toHex(fixed(f.pub, 32, "pub"))}`);
+}
+export function signPossession(f: Omit<PossessionFields, "pub">, secret: Uint8Array): { pub: Uint8Array; signature: Uint8Array } {
+  const pub = publicKeyOf(secret);
+  return { pub, signature: ed25519.sign(possessionMessage({ ...f, pub }), secret) };
+}
+export function verifyPossession(f: PossessionFields, signature: Uint8Array): boolean {
+  try { return signature.length === 64 && ed25519.verify(signature, possessionMessage(f), f.pub); } catch { return false; }
+}
+
 // ---------- keys & signing ----------
 export function generateSecretKey(): Uint8Array { return ed25519.utils.randomPrivateKey(); }
 export const publicKeyOf = (secret: Uint8Array) => ed25519.getPublicKey(secret);
@@ -146,12 +191,35 @@ export function verifyAuthorization(a: SignedAuthorization): boolean {
   } catch { return false; }
 }
 
+/** Does a (signature-checked) authorization approve EXACTLY the invoice this terminal displayed?
+ *  Compares every field the phone signs: network, vault, token, merchant, terminal, invoice id, amount, expiry and the
+ *  quote hash (currency, local price, digits, rate, source and line items). Returns null when identical,
+ *  "OUTDATED_APP" when the only difference is a missing item list (a phone running an app version from before itemized
+ *  quotes signs the total without the items), or "MISMATCH" for any other difference. */
+export function authorizationMismatch(shown: Invoice, a: SignedAuthorization): null | "OUTDATED_APP" | "MISMATCH" {
+  const s = a.invoice;
+  const same = (x: Invoice, y: Invoice) => {
+    try {
+      return x.network === y.network && x.vault === y.vault && x.token === y.token && x.merchant === y.merchant &&
+        x.terminalId === y.terminalId && toHex(x.invoiceId) === toHex(y.invoiceId) && x.amount === y.amount &&
+        x.expiresAt === y.expiresAt && toHex(quoteHash(x.quote, x.amount)) === toHex(quoteHash(y.quote, y.amount));
+    } catch { return false; }
+  };
+  if (same(shown, s)) return null;
+  if (shown.quote.items !== undefined && s.quote.items === undefined) {
+    const { items: _drop, ...q } = shown.quote;
+    if (same({ ...shown, quote: q }, s)) return "OUTDATED_APP";
+  }
+  return "MISMATCH";
+}
+
 export function validateInvoice(inv: Invoice, nowS: bigint): void {
   if (inv.amount <= 0n) throw new ProtocolError("amount must be positive");
   if (inv.expiresAt < nowS) throw new ProtocolError("invoice expired");
   if (inv.expiresAt > nowS + BigInt(MAX_INVOICE_WINDOW_S)) throw new ProtocolError("invoice window too long");
   if (inv.invoiceId.length !== 32) throw new ProtocolError("invoiceId must be 32 bytes");
   if (computeCharge(inv.quote) !== inv.amount) throw new ProtocolError("amount does not match quote");
+  validateItems(inv.quote);
 }
 
 // ---------- amounts & FX (integer only) ----------
@@ -205,7 +273,8 @@ function netCode(p: string) {
 function invToObj(i: Invoice) {
   return { n: netCode(i.network), v: i.vault, t: i.token, m: i.merchant, mn: i.merchantName, ti: i.terminalId,
     id: b64u(i.invoiceId), a: i.amount.toString(), e: i.expiresAt.toString(),
-    q: [i.quote.currency, i.quote.localMinor.toString(), i.quote.minorDigits, i.quote.rate, i.quote.source] };
+    q: [i.quote.currency, i.quote.localMinor.toString(), i.quote.minorDigits, i.quote.rate, i.quote.source],
+    ...(i.quote.items ? { li: i.quote.items.map((x) => [x.name, x.qty, x.unitMinor.toString()]) } : {}) };
 }
 function objToInv(o: any): Invoice {
   if (!o || typeof o !== "object" || !Array.isArray(o.q) || o.q.length !== 5) throw new ProtocolError("malformed invoice");
@@ -221,6 +290,14 @@ function objToInv(o: any): Invoice {
     quote: { currency: str(o.q[0], "currency"), localMinor: big(o.q[1], "local"), minorDigits: o.q[2],
       rate: str(o.q[3], "rate"), source: str(o.q[4], "source") },
   };
+  if (o.li !== undefined) {
+    if (!Array.isArray(o.li)) throw new ProtocolError("bad line items");
+    inv.quote.items = o.li.map((x: unknown) => {
+      if (!Array.isArray(x) || x.length !== 3 || !Number.isInteger(x[1])) throw new ProtocolError("bad line items");
+      return { name: str(x[0], "item name"), qty: x[1], unitMinor: big(x[2], "item price") };
+    });
+    validateItems(inv.quote);
+  }
   for (const a of [inv.vault, inv.token, inv.merchant]) strkey(a);
   if (inv.invoiceId.length !== 32) throw new ProtocolError("bad invoice id");
   return inv;

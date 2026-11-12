@@ -48,7 +48,11 @@ test("recipient signs offline, survives offline reload, recovers on reconnect", 
   expect(P.verifyAuthorization(auth)).toBe(true);
   expect(P.toHex(auth.signer)).toBe(pub);
   expect(auth.familyId).toBe(1n);
-  expect(requests, "no network requests while importing and signing offline").toEqual([]);
+  // Next.js nav-link prefetches (?_rsc= route payloads, hashed /_next/static chunks) may fire on WebKit's idle timing
+  // and simply fail offline; they carry no data. Everything else (any /api/ call, any other request) must be absent.
+  const prefetch = (u: string) => /[?&]_rsc=/.test(u) || new URL(u).pathname.startsWith("/_next/static/");
+  expect(requests.filter((u) => !prefetch(u)), "no network requests while importing and signing offline").toEqual([]);
+  expect(requests.filter((u) => u.includes("/api/")), "no API calls while signing offline").toEqual([]);
   await expect(page.getByText("waiting for the shop to settle")).toBeVisible();
 
   // Offline reload: works when the service worker controls the page

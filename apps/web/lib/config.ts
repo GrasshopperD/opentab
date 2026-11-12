@@ -26,4 +26,20 @@ export const DEMO_RATES: Record<string, { rate: string; digits: number }> = {
 };
 export const RATE_SOURCE = "ILLUSTRATIVE";
 
+/** Existing, already-funded family used by the judging demo. Its balance is always read live from the chain. */
+export const DEMO_FAMILY_ID = (process.env.NEXT_PUBLIC_DEMO_FAMILY_ID || "7").replace(/\D/g, "") || "7";
+
+/** Invitation pairing UI (local preview only). Set at BUILD time from INVITES_ENABLED=1 via next.config.ts; always off on Vercel.
+ *  The invitation API checks independently at runtime and fails closed. */
+export const INVITES_UI = process.env.OT_INVITES_UI === "1";
+
+/** Illustrative demo catalog, priced in USD cents. Names must match the protocol's item-name rule [A-Za-z0-9 ]. */
+export const CATALOG: { sku: string; name: string; unitMinor: bigint }[] = [
+  { sku: "milk", name: "Milk", unitMinor: 300n },
+  { sku: "bread", name: "Bread", unitMinor: 200n },
+  { sku: "water", name: "Water", unitMinor: 100n },
+  { sku: "apples", name: "Apples", unitMinor: 400n },
+];
+export const CATALOG_CURRENCY = "USD";
+
 export const isConfigured = () => Boolean(VAULT_ID && TOKEN_ID && MERCHANTS.every((m) => m.address));
