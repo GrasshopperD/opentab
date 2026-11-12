@@ -1,11 +1,12 @@
 import { read, scv } from "@/lib/chain.server";
-import { fail, ok, parseId, recentPayments } from "@/lib/api.server";
+import { readLimited, fail, ok, parseId, recentPayments } from "@/lib/api.server";
 import { VAULT_ID } from "@/lib/config";
 import { fromHex } from "@opentab/shared";
 
 export const dynamic = "force-dynamic";
 
 export async function GET(req: Request, ctx: { params: Promise<{ id: string }> }) {
+  const limited = readLimited(req); if (limited) return limited;
   try {
     const familyId = parseId((await ctx.params).id);
     const family = await read(VAULT_ID, "get_family", [scv.u64(familyId)]);

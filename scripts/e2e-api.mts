@@ -1,6 +1,6 @@
 // REAL Testnet end-to-end test against a running app (default http://localhost:3000).
 // Not mocked: creates a family, pairs a fresh key, pays, and attempts a replay on chain.
-// Usage: node --experimental-strip-types scripts/e2e-api.mts [baseUrl]
+// Usage: OT_DEMO_CODE=<code> node --experimental-strip-types scripts/e2e-api.mts [baseUrl]
 import * as P from "../packages/shared/src/index.ts";
 
 const BASE = process.argv[2] ?? "http://localhost:3000";
@@ -10,12 +10,18 @@ const MERCHANT_A = "GCDSS6VQP6GGTV6K2J6FMG2TQN2G2EG37TSQ5UYQK547ODDYGNPPRWN4";
 const MERCHANT_B = "GBIIBDC4PM237AP57I42FO4GGKDUC53ZAQXIOOALVFBNCOLDULKJGEAI";
 let failures = 0;
 const check = (name: string, cond: boolean, extra = "") => { console.log(`${cond ? "PASS" : "FAIL"} ${name} ${extra}`); if (!cond) failures++; };
-const post = async (p: string, b: any) => (await fetch(BASE + p, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(b) })).json();
+let COOKIE = "";
+const post = async (p: string, b: any) => (await fetch(BASE + p, { method: "POST", headers: { "content-type": "application/json", origin: BASE, cookie: COOKIE }, body: JSON.stringify(b) })).json();
 const get = async (p: string) => (await fetch(BASE + p)).json();
 
 for (const r of ["/", "/sender", "/family", "/shop", "/manifest.webmanifest", "/sw.js"]) {
   const s = (await fetch(BASE + r)).status; check(`GET ${r}`, s === 200, String(s));
 }
+
+// Demo operator login (code from env OT_DEMO_CODE; never hard-coded).
+const login = await fetch(BASE + "/api/auth/login", { method: "POST", headers: { "content-type": "application/json", origin: BASE }, body: JSON.stringify({ code: process.env.OT_DEMO_CODE ?? "" }) });
+COOKIE = (login.headers.get("set-cookie") ?? "").split(";")[0];
+check("demo login", login.status === 200 && COOKIE.startsWith("ot_demo="));
 
 const fam = await post("/api/sender/family", { amount: "5" });
 check("create + fund family", !!fam.familyId && fam.depositStatus === "CONFIRMED", `family=${fam.familyId} create=${fam.createTx} deposit=${fam.depositTx}`);

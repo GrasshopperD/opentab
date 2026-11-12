@@ -25,7 +25,7 @@ export default function Family() {
   const [authQR, setAuthQR] = useState("");
   const [hist, setHist] = useState<Hist[]>([]);
 
-  useEffect(() => { setSk(get(SK)); setFam(get(FAM)); setName(get(NAME)); try { setHist(JSON.parse(get(HIST) || "[]")); } catch { } }, []);
+  useEffect(() => { const k = get(SK); setSk(/^[0-9a-f]{64}$/.test(k) ? k : ""); setFam(/^\d{1,12}$/.test(get(FAM)) ? get(FAM) : ""); setName(get(NAME)); try { setHist(JSON.parse(get(HIST) || "[]")); } catch { } }, []);
   const pub = sk ? toHex(publicKeyOf(fromHex(sk))) : "";
 
   const refresh = useCallback(async () => {

@@ -126,6 +126,8 @@ describe("status machine", () => {
     expect(P.transition("SUBMITTED", "UNKNOWN")).toBe("UNKNOWN");
     expect(P.transition("UNKNOWN", "CONFIRMED")).toBe("CONFIRMED");
     expect(() => P.transition("UNKNOWN", "SUBMITTED")).toThrow();
+    expect(P.transition("UNKNOWN", "AUTHORIZED_LOCALLY")).toBe("AUTHORIZED_LOCALLY");
+    expect(() => P.transition("EXPIRED", "SUBMITTED")).toThrow();
     expect(() => P.transition("CONFIRMED", "FAILED")).toThrow();
     expect(P.isPaid("PENDING")).toBe(false);
   });

@@ -1,4 +1,5 @@
 import { invoke, roleAddress, scv } from "@/lib/chain.server";
+import { guard } from "@/lib/guard.server";
 import { fail, ok } from "@/lib/api.server";
 import { parseTokenAmount } from "@opentab/shared";
 
@@ -7,7 +8,9 @@ export const dynamic = "force-dynamic";
 /** Demo sender (server-held Testnet identity) creates a family and funds it. */
 export async function POST(req: Request) {
   try {
-    const body = await req.json().catch(() => ({}));
+    const g = await guard(req, { limit: 4 });
+    if ("res" in g) return g.res;
+    const body = g.body;
     const amount = parseTokenAmount(String(body.amount ?? "20"));
     if (amount <= 0n || amount > parseTokenAmount("50")) return ok({ error: "BadRequest", detail: "deposit must be 0-50" });
     const sender = roleAddress("sender");

@@ -267,7 +267,7 @@ const NEXT: Record<PaymentStatus, PaymentStatus[]> = {
   AUTHORIZED_LOCALLY: ["SUBMITTED", "EXPIRED"],
   SUBMITTED: ["PENDING", "CONFIRMED", "FAILED", "UNKNOWN"],
   PENDING: ["CONFIRMED", "FAILED", "UNKNOWN"],
-  UNKNOWN: ["CONFIRMED", "FAILED", "PENDING"], // resolved only by reconciliation, never by resubmitting a new invoice
+  UNKNOWN: ["CONFIRMED", "FAILED", "PENDING", "AUTHORIZED_LOCALLY"], // reconciled; may retry the SAME invoice only (on-chain nonce makes a double charge impossible)
   CONFIRMED: [], FAILED: [], EXPIRED: [],
 };
 export function transition(from: PaymentStatus, to: PaymentStatus): PaymentStatus {

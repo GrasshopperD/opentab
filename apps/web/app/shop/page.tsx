@@ -1,10 +1,10 @@
 "use client";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   computeCharge, encodeInvoiceQR, formatLocal, formatTokenAmount, parseAuthQR, parseInvoiceQR, parseLocalAmount,
   randomBytes, toHex, verifyAuthorization, type Invoice, type PaymentStatus, type Quote,
 } from "@opentab/shared";
-import { api, ERROR_TEXT, QR, Scanner, TxLink } from "../components";
+import { api, DemoAccess, ERROR_TEXT, QR, Scanner, TxLink } from "../components";
 import { DEMO_RATES, MERCHANTS, NETWORK_PASSPHRASE, RATE_SOURCE, TOKEN_CODE, TOKEN_ID, VAULT_ID } from "@/lib/config";
 
 const CUR = "opentab.shop.current"; // survives refresh so a pending payment can be reconciled
@@ -57,33 +57,65 @@ export default function Shop() {
     } catch (e: any) { setNote(e.message); }
   }, [c]);
 
+  const busy = useRef(false); // synchronous lock: a double-click cannot start two submissions
+
   async function submit(replay = false) {
-    if (!c?.authQR) return;
-    if (!replay) save({ ...c, status: "SUBMITTED", error: undefined });
-    setNote(replay ? "Attempting to charge the same approval again…" : "");
-    const r = await api("/api/merchant/pay", { method: "POST", body: JSON.stringify({ merchantId: c.merchantId, authorization: c.authQR, forceSubmitForDemo: replay }) });
-    if (replay) {
-      setNote(r.status === "CONFIRMED" ? "UNEXPECTED: second charge succeeded." : `Replay blocked: ${ERROR_TEXT[r.error] ?? r.error}`);
+    if (!c?.authQR || busy.current) return;
+    const inv0 = parseInvoiceQR(c.invoiceQR);
+    if (!replay && Number(inv0.expiresAt) * 1000 < Date.now()) {
+      save({ ...c, status: "EXPIRED", error: "Invoice expired before submission. Start a new sale; the customer must approve again." });
       return;
     }
-    const status: PaymentStatus = r.status === "CONFIRMED" ? "CONFIRMED" : r.status === "PENDING" ? "PENDING" : r.status === "UNKNOWN" ? "UNKNOWN" : "FAILED";
-    save({ ...c, status, hash: r.hash, error: r.error ? (ERROR_TEXT[r.error] ?? `${r.error} ${r.detail ?? ""}`) : undefined });
-    loadInfo();
+    busy.current = true;
+    try {
+      if (!replay) save({ ...c, status: "SUBMITTED", error: undefined });
+      setNote(replay ? "Attempting to charge the same approval again…" : "");
+      const r = await api("/api/merchant/pay", { method: "POST", body: JSON.stringify({ merchantId: c.merchantId, authorization: c.authQR, forceSubmitForDemo: replay }) });
+      if (replay) {
+        setNote(r.status === "CONFIRMED" ? "UNEXPECTED: second charge succeeded." : `Replay blocked: ${ERROR_TEXT[r.error] ?? r.error}`);
+        return;
+      }
+      const transport = r.error === "NetworkError" || r.error === "BadResponse" || r.error === "ServerError";
+      const status: PaymentStatus = r.status === "CONFIRMED" ? "CONFIRMED"
+        : r.status === "PENDING" ? "PENDING"
+        : r.status === "UNKNOWN" || transport ? "UNKNOWN"
+        : r.error === "Unauthorized" || r.error === "RateLimited" ? "AUTHORIZED_LOCALLY" // not submitted at all
+        : "FAILED";
+      save({ ...c, status, hash: r.hash, error: r.error ? (ERROR_TEXT[r.error] ?? `${r.error} ${r.detail ?? ""}`) : undefined });
+      if (status === "AUTHORIZED_LOCALLY") setNote(ERROR_TEXT[r.error] ?? r.error);
+      loadInfo();
+    } finally { busy.current = false; }
   }
 
+  /** Resolve PENDING/UNKNOWN from the chain: by tx hash, then by the invoice's on-chain replay record. */
   async function reconcile() {
-    if (!c?.hash) return;
-    const r = await api(`/api/tx/${c.hash}`);
-    if (r.status === "CONFIRMED" || r.status === "FAILED") save({ ...c, status: r.status }); // PENDING stays PENDING
-    loadInfo();
+    if (!c) return;
+    if (c.hash) {
+      const r = await api(`/api/tx/${c.hash}`);
+      if (r.status === "CONFIRMED" || r.status === "FAILED") { save({ ...c, status: r.status }); loadInfo(); return; }
+    }
+    if (!c.authQR) return;
+    let fam: bigint, id: string;
+    try { const a = parseAuthQR(c.authQR); fam = a.familyId; id = toHex(a.invoice.invoiceId); } catch { return; }
+    const s = await api(`/api/invoice?family=${fam}&id=${id}`);
+    if (s.used === true) { save({ ...c, status: "CONFIRMED", error: undefined }); loadInfo(); }
+    else if (s.used === false && !c.hash) {
+      // Never reached the chain: safe to retry the SAME approval (the contract allows each invoice once).
+      save({ ...c, status: "AUTHORIZED_LOCALLY", error: undefined });
+      setNote("Not settled on Stellar. You can safely submit the same approval again.");
+    }
   }
-  useEffect(() => { if (c && (c.status === "PENDING" || c.status === "UNKNOWN") && c.hash) { const t = setTimeout(reconcile, 3000); return () => clearTimeout(t); } });
+  useEffect(() => {
+    if (c && (c.status === "PENDING" || c.status === "UNKNOWN")) { const t = setTimeout(reconcile, 3000); return () => clearTimeout(t); }
+  });
 
   const inv = c ? (() => { try { return parseInvoiceQR(c.invoiceQR); } catch { return null; } })() : null;
+  useEffect(() => { if (c && !inv) save(null); }); // corrupted saved state: start over instead of crashing
 
   return (
     <>
       <h1>Shop checkout</h1>
+      <DemoAccess />
       <div className="card">
         <div className="row">
           <div><label>Shop</label>
@@ -142,6 +174,8 @@ export default function Shop() {
             </>
           )}
           {c.status === "FAILED" && <div className="status bad">Payment failed: {c.error}<br /><TxLink hash={c.hash} /></div>}
+          {c.status === "EXPIRED" && <div className="status bad">{c.error}</div>}
+          {(c.status === "PENDING" || c.status === "UNKNOWN") && <button className="btn ghost small" onClick={reconcile}>Check status now</button>}
           {note && <div className="status bad">{note}</div>}
           <button className="btn ghost small" onClick={() => { save(null); setNote(""); }}>New sale</button>
         </div>

@@ -1,7 +1,7 @@
 "use client";
 import { useCallback, useEffect, useState } from "react";
 import { fingerprint, formatTokenAmount, parsePairingQR, toHex } from "@opentab/shared";
-import { api, ERROR_TEXT, Scanner, TxLink } from "../components";
+import { api, DemoAccess, ERROR_TEXT, Scanner, TxLink } from "../components";
 import { MERCHANTS, TOKEN_CODE } from "@/lib/config";
 
 const LS = "opentab.sender.families";
@@ -60,6 +60,7 @@ export default function Sender() {
   return (
     <>
       <h1>Sender</h1>
+      <DemoAccess />
       <p className="muted">Demo sender: a Testnet account operated by this server holds {TOKEN_CODE} test tokens.</p>
 
       <div className="card">
