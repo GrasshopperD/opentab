@@ -1,6 +1,6 @@
 # Session handoff | OpenTab Global
 
-**Last updated:** 2026-11-12, session 4 (browser testing + security hardening). Deadline: **Fri 13 Nov 2026, 08:30 EST**.
+**Last updated:** 2026-11-12, session 5 (demo page, print materials, Mode B contract). Deadline: **Fri 13 Nov 2026, 08:30 EST**.
 History of earlier sessions: `docs/BUILD_LOG.md` (append-only).
 
 ## Working right now (verified this session, real Stellar Testnet)
@@ -14,6 +14,11 @@ History of earlier sessions: `docs/BUILD_LOG.md` (append-only).
 | Live API e2e (`scripts/e2e-api.mts`) | 18/18 |
 | Access control / CSRF / limits (`scripts/security-api.mts`) | 18/18 |
 | Secrets | none in `.next/static`, rendered HTML, or Git |
+| `/demo` + `/api/preflight` | public judge page; read-only checks 6/6 OK |
+| Offline tests (`tests/e2e/offline.spec.ts`) | Chromium 2/2, WebKit-iPhone emulation 2/2 (offline *reload* not testable in WebKit emulation) |
+| Layout | 320-1440 px, 5 routes, no overflow |
+| Print | `submission/*.pdf` (one-page = 1 page; trifold 48x36 in; 8 slides); sources `submission/print/*.html`; re-render `node scripts/render-print.mjs` |
+| OfflineChannel | `contracts/offline_channel`: 24/24 tests, WASM builds. **Not deployed, no UI.** |
 
 ## Demo access model
 
@@ -40,7 +45,8 @@ If port 3000 is busy, an old `next start` is probably still running: find it wit
 
 - Physical iPhone / Android: camera scanning, airplane mode, PWA install, offline reload. Only **emulated** offline in Chromium was tested.
 - Vercel deployment, public GitHub, demo video, Devpost.
-- Mode B (both offline): not started.
+- Mode B: contract implemented and unit-tested only; not deployed, no shop/phone UI, no local acceptance ledger (A10) yet.
+- WebKit offline reload (emulator limitation) and anything on a physical iPhone.
 
 ## Manual phone test (the remaining acceptance test)
 
@@ -81,6 +87,7 @@ See README → "Deploy to Vercel". Root Directory `apps/web`; set all env vars f
 
 1. User: push to GitHub, deploy to Vercel, share the URL. 2. Run `security-api.mts` + Playwright against the Vercel URL
 (`$env:OT_BASE_URL="https://<url>"`). 3. Manual phone test above. 4. Record video, submit Devpost + one-page overview.
-5. After submission: Mode B (OfflineChannel).
+5. Add printed QR codes (live URL, GitHub, explorer tx) to the empty lower area of `submission/print/trifold.html`, re-render.
+6. After submission: Mode B integration (deploy OfflineChannel after review; shop offline acceptance ledger in IndexedDB; ticket UI).
 
 **Resume prompt:** "Read docs/SESSION_HANDOFF.md and docs/NEXT_STEPS.md. Continue with the next exact task. Testnet only."

@@ -14,7 +14,13 @@ Items marked **[USER]** need the user to do or approve something.
 - [ ] **[USER]** Vercel import (root `apps/web`), set env vars incl. `DEMO_ACCESS_CODE` / `DEMO_SESSION_SECRET` (server-only).
 - [ ] Re-run `scripts/security-api.mts` and Playwright against the Vercel URL.
 - [ ] **[USER]** Manual phone test (procedure in `docs/SESSION_HANDOFF.md`): camera, airplane mode, PWA install.
-- [ ] **[USER]** Record 1-minute video (`submission/DEMO_SCRIPT.md`), submit one-page overview + Devpost.
+- [ ] **[USER]** Record 1-minute video (`submission/DEMO_SCRIPT.md`), submit one-page overview (`submission/OpenTab_Global_One_Page_Overview.pdf`) + Devpost.
+- [ ] Add QR codes for the live URL / GitHub / explorer to the trifold once URLs exist; print `submission/OpenTab_Global_Trifold_48x36in.pdf`.
+
+## Mode B (after submission)
+- [x] OfflineChannel contract + 24 tests (session 5). Not deployed.
+- [ ] Security review of OfflineChannel, then Testnet deploy.
+- [ ] Shop offline acceptance ledger (IndexedDB, highest cumulative, single terminal) + phone ticket signing UI + JS/Rust ticket vector.
 
 ---
 

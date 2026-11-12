@@ -64,7 +64,7 @@ export default function Demo() {
           <div className="mode planned"><span className="pill off">In development</span>
             <h3>Both offline</h3>
             <p>Funds reserved on chain for one named shop; the shop accepts running-total tickets offline and settles later.
-              Contract under test locally; not deployed and not part of this demo.</p></div>
+              Contract written and unit-tested (24 tests); not deployed and not part of this demo.</p></div>
         </div>
       </section>
 

@@ -5,6 +5,18 @@ Only record results that were genuinely observed. Never record a planned step as
 
 ---
 
+## 2026-11-12: Session 5, demo polish, print materials, Mode B contract (unsupervised sprint)
+
+- **`/demo` judge page** (public): roles, 5-step flow diagram, offline-signing explanation, live vs. in-development modes, contract/asset IDs, verified tx links (`apps/web/lib/evidence.ts`). **Preflight** (`/api/preflight`, read-only, spends nothing): RPC health, vault config + token match, asset name, merchant balances readable, family #1 read, access enabled; operator-only (requires session): server signer accounts exist and match public merchant addresses, sender OTUSD balance. Observed: 6/6 public checks OK.
+- **UI polish:** sender numbered sections + prominent family number + synchronous double-submit lock on all three actions; family page 3-step progress, "Spending allowance", participating shops, offline explainer, approval history now shows "✓ Settled on Stellar" (checked via `/api/invoice` when online); shop large success panel with amount, local price, shop, terminal, explorer link. Nav wraps on 320 px; QR sized `min(280px, 78vw)`; 48 px buttons. SW cache bumped to `opentab-v2`, `/demo` precached.
+- **Browser tests (Playwright, against `next start`):** layout at 320/375/390/430/768/1440 px for `/ /demo /sender /family /shop`: no horizontal overflow (6/6). New `tests/e2e/offline.spec.ts` (no chain spend): Chromium 2/2; **WebKit (iPhone 13 emulation)** 2/2, but WebKit offline *reload* could not be tested: probe showed SW controlling the page and shell cached, yet navigation failed with "WebKit encountered an internal error" inside the emulator. Recorded as a limitation, not a pass. One intermittent WebKit failure on the first run; 3 subsequent runs passed. Full on-chain journey: 1/1, tx `f1b5d27041aa4a5f3e4afcad1e5c07b0fe257007d5106b112977cdcc2cd76ed9`. Final non-spending suite: 12/12.
+- **Screenshots** `submission/screenshots/01-06*.png`: real states from that run (access form asserted absent).
+- **Print materials** (HTML sources in `submission/print/`, rendered by `scripts/render-print.mjs`): `OpenTab_Global_One_Page_Overview.pdf` (verified 1 page, Letter), `OpenTab_Global_Trifold_48x36in.pdf` (standard 48x36 in tabletop board, 12|24|12 in panels; no organizer dimensions found in repo), `OpenTab_Global_Pitch_Slides.pdf` (8 slides 16:9).
+- **OfflineChannel** (`contracts/offline_channel`): reserved per-merchant/terminal channels, 300-byte `OTOC1` tickets, `accept_until` / `settle_until` (>= accept + 2 days) / `refund_after` (>= settle_until), merchant-only settle, pay-the-difference, bounded retiring keys (max 3) settleable until `settle_until`, merchant early release, deadlines only move later, events, TTL bumps. Bug caught in own draft before tests: a second rotation would have dropped the first retiring key; fixed. **24/24 tests pass; WASM 14,103 B, hash `37e10b7c…3c4d`. NOT deployed; no UI integration.** FamilyVault WASM hash unchanged (`e3aac2d9…`).
+- Totals: Rust 58/58 (34 + 24), TS 13/13, security 18/18, tsc clean, build OK, no secrets in build output or Git.
+
+---
+
 ## 2026-11-12: Session 4, browser testing, security hardening, release prep
 
 - **Security (new):** `apps/web/lib/guard.server.ts`. Server-only `DEMO_ACCESS_CODE` -> `/api/auth/login` -> HMAC-signed HttpOnly SameSite=Strict cookie (8 h). All 4 signing routes (`sender/family`, `sender/deposit`, `sender/key`, `merchant/pay`) require session + same Origin + JSON + body <= 4 KB + per-route per-IP rate limit. Fails closed if access env is missing. Public GET routes rate limited (120/min/IP). Protocol parse errors now 400 (were 500).

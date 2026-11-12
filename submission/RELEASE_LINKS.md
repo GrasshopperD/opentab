@@ -26,6 +26,8 @@ Never invent IDs, URLs or hashes. Explorer: `https://stellar.expert/explorer/tes
 | App API e2e run #1 (family 2) | pay A `2c66e75f9e9401fa6505dba5278e0877c797dbe87bc8ee418c1000254a08eb4e`, pay B `29d15fc4611fefc37d0a7a5f8243973dba91e431315aad2387f4f62a39b5ac51` | 2026-11-12 | CONFIRMED |
 | App API e2e run #2 with access control (family 4) | pay A `755c67044983d335ae0987014ef51325da6ca4fd5a7c171504c18d99aa5da098`, pay B `a7d217f2cbd98dc94daad6b7f9eecc689a55c7a1fc19d9662582c8f8ef711517`; replay -> InvoiceUsed; overspend -> InsufficientFunds | 2026-11-12 | CONFIRMED |
 | **Browser UI payment (Playwright, phone context offline while signing)** | `336b9c43392f6fcd87532328805fbe68859be2a6d6cb09e0d97d52bc44d84f65` (run 1), **`e42405a85a595d7a9bc347d1f4fa09b2364a76043984746e6ed9a7f8e98811d4`** (run 2): MXN 20.00 -> 1.0857764 OTUSD; family and merchant balances changed by exactly that amount once despite a double-click; replay button -> rejected | 2026-11-12 | CONFIRMED |
+| Browser UI payment, run 3 (session 5, with screenshots) | `f1b5d27041aa4a5f3e4afcad1e5c07b0fe257007d5106b112977cdcc2cd76ed9` | 2026-11-12 | CONFIRMED |
+| OfflineChannel (Mode B) | Local only: 24 tests pass, WASM hash `37e10b7cf68499750d257347222e0aa56c6d97a25f6247bfbc01e4826f7e3c4d` | 2026-11-12 | **NOT DEPLOYED** |
 | Overspend / expired / invalid signature | Covered by Rust unit tests (34 passing), not run on chain | 2026-11-12 | LOCAL TESTS |
 | One-minute demonstration video URL | `TBD` | - | NOT RECORDED |
 | Devpost submission URL + confirmation | `TBD` | - | NOT SUBMITTED |
