@@ -1,0 +1,7 @@
+{
+  "name": "opentab-web",
+  "private": true,
+  "type": "module",
+  "scripts": { "test": "node --test" },
+  "dependencies": { "@stellar/stellar-sdk": "latest" }
+}

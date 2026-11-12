@@ -1,0 +1,62 @@
+# ---- Secrets / keys / credentials ----
+.env
+.env.*
+!.env.example
+*.secret
+household.secret
+*.pem
+*.key
+*.p12
+*.pfx
+*.jks
+*.keystore
+secrets/
+**/secret*.json
+*seed*.txt
+*mnemonic*
+# Stellar CLI local config/identities (project-scoped)
+.stellar/
+**/.stellar/
+.soroban/
+**/.soroban/
+# Vercel / Supabase local config
+.vercel/
+supabase/.temp/
+supabase/.branches/
+
+# ---- Node / Next.js ----
+node_modules/
+.next/
+out/
+dist/
+build/
+coverage/
+*.tsbuildinfo
+.turbo/
+npm-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# ---- Rust / Soroban ----
+**/target/
+**/*.wasm
+**/test_snapshots/
+
+# ---- Local / editor / OS ----
+.DS_Store
+Thumbs.db
+desktop.ini
+.idea/
+.vscode/
+*.log
+*.tmp
+*.swp
+tmp/
+.cache/
+
+# ---- Private reference material (organizer slides, internal decision PDFs) ----
+# Excluded until the user decides they may be published.
+references/
+
+# ---- Generated submission media ----
+submission/recordings/
