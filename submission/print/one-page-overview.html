@@ -1,0 +1,69 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><title>OpenTab Global: one-page overview</title>
+<link rel="stylesheet" href="shared.css">
+<style>
+@page { size: Letter; margin: 0.45in; }
+body { font-size: 10.6pt; line-height: 1.38; }
+header { display: flex; justify-content: space-between; align-items: flex-end; border-bottom: 3px solid var(--accent); padding-bottom: 6pt; }
+header h1 { font-size: 28pt; } header .tag { font-size: 11.5pt; color: var(--muted); margin-top: 2pt; }
+header .ev { text-align: right; font-size: 8.5pt; color: var(--muted); }
+.cols { display: grid; grid-template-columns: 1fr 1fr; gap: 11pt 18pt; margin-top: 10pt; }
+h2 { font-size: 12.5pt; color: var(--accent); margin: 0 0 3pt; text-transform: uppercase; letter-spacing: .04em; }
+p { margin: 0 0 4pt; } ul { margin: 0; padding-left: 13pt; } li { margin: 1.5pt 0; }
+.flowbox { margin: 11pt 0 3pt; } .flowbox h2 { margin-bottom: 5pt; } .flow { font-size: 10pt; }
+.proof { background: #f4f8f7; border: 1px solid var(--line); border-radius: 6pt; padding: 7pt 9pt; }
+footer { margin-top: 8pt; font-size: 8.5pt !important; border-top: 1px solid var(--line); padding-top: 5pt; font-size: 8pt; color: var(--muted); }
+</style></head><body>
+<header>
+  <div><h1>OpenTab <span class="accent">Global</span></h1>
+  <div class="tag">Family support, spendable at the corner shop, approved on a phone with no data, settled on Stellar.</div></div>
+  <div class="ev">Blockchain Innovation Challenge powered by Stellar<br>Problem Space 3: Transnational Households</div>
+</header>
+
+<div class="cols">
+  <section><h2>The problem</h2>
+    <p>Money sent home often has to become cash at a pickup counter before it can buy groceries or medicine. Many recipients
+    have a phone but unreliable or costly mobile data. Senders cannot easily earmark support for essentials, and neighbourhood
+    shops carry informal credit risk.</p></section>
+  <section><h2>Our solution</h2>
+    <p>A remittance becomes a <b>shared family spending balance</b> held by a Soroban smart contract. The family member pays at
+    participating local shops by approving each purchase on their phone, <b>without internet</b>. The online shop submits the
+    approval; the contract pays the shop in one atomic transaction.</p></section>
+</div>
+
+<div class="flowbox"><h2>How a purchase works</h2>
+  <div class="flow">
+    <div class="s"><span class="w">Sender · online</span><b>Funds</b>the family balance</div>
+    <div class="s"><span class="w">Shop · online</span><b>Invoice QR</b>local price + exact charge</div>
+    <div class="s off"><span class="w">Family phone · offline</span><b>Signs</b>that exact purchase</div>
+    <div class="s"><span class="w">Shop · online</span><b>Submits</b>the signed approval</div>
+    <div class="s"><span class="w">Stellar</span><b>Verifies + pays</b>once; replays refused</div>
+  </div>
+</div>
+
+<div class="cols">
+  <section><h2>Offline authorization</h2>
+    <p>The phone holds an Ed25519 key registered on chain by the sender. Approving signs a fixed 340-byte message binding the
+    Testnet network, the contract, the token, family, shop, terminal, a random invoice ID, the exact amount, the quoted local
+    price and an expiry. The contract rebuilds those bytes and verifies the signature: change any field and it fails.</p></section>
+  <section><h2>Why Stellar</h2>
+    <ul><li>Soroban enforces the rules on chain: one-time invoices, per-family balances, key revocation, merchant binding.</li>
+    <li>Stellar Asset Contracts let the contract hold and pay a dollar-denominated token.</li>
+    <li>Low fees and ~5 s finality make per-purchase settlement practical.</li>
+    <li>Native Ed25519 verification: the family member needs no Stellar account and no XLM.</li></ul></section>
+  <section class="proof"><h2>Verified prototype (Stellar Testnet)</h2>
+    <ul><li>FamilyVault deployed: <code>CAUCH3MNJGIYDLOY3OB3YCKRCBWWY3J3HZB5QCHPJXUWXBMK5IABYLGW</code></li>
+    <li>Real signed payments at two shops from one family balance; e.g. tx <code>0b8d72ed…bb05f</code></li>
+    <li>Same approval replayed: refused by the contract. Overspend: refused.</li>
+    <li>34 contract tests · 13 protocol tests · 18 live API checks · 18 security checks · browser tests including signing in an
+    emulated offline browser.</li></ul></section>
+  <section><h2>What makes it different</h2>
+    <ul><li><b>vs. remittance apps:</b> spendable at the shop with no cash pickup.</li>
+    <li><b>vs. gift cards:</b> one balance across independent shops; rules enforced by a public contract.</li>
+    <li><b>vs. crypto wallets:</b> the shopper needs no data, no XLM, no crypto knowledge.</li></ul>
+    <h2 style="margin-top:6pt">Roadmap</h2>
+    <p>Physical-device testing → both-offline mode with funds reserved for one named shop (in development) → real USDC →
+    licensed local payout partners → audit and pilots.</p></section>
+</div>
+<footer><b>Honest limits:</b> Stellar Testnet prototype. Settlement token is OpenTab Demo USD (OTUSD): no value, not USDC.
+Exchange rates are illustrative. No bank payouts. Unaudited. Built with AI assistance.</footer>
+</body></html>

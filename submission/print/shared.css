@@ -1,0 +1,13 @@
+:root { --ink:#0f1f2e; --muted:#4f5f6b; --accent:#0f766e; --soft:#e6f4f1; --warm:#fff4dc; --line:#d9e2df; }
+* { box-sizing: border-box; }
+html, body { margin: 0; color: var(--ink); font-family: "Segoe UI", system-ui, -apple-system, Roboto, Arial, sans-serif; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+h1, h2, h3 { margin: 0; line-height: 1.15; letter-spacing: -.01em; }
+.accent { color: var(--accent); }
+.flow { display: flex; gap: .5em; align-items: stretch; }
+.flow .s { flex: 1; background: var(--soft); border-radius: .6em; padding: .55em .6em; position: relative; }
+.flow .s.off { background: var(--warm); }
+.flow .s b { display: block; color: var(--accent); }
+.flow .s .w { font-size: .72em; text-transform: uppercase; letter-spacing: .05em; color: var(--muted); }
+.flow .s + .s::before { content: "→"; position: absolute; left: -.62em; top: 50%; transform: translateY(-50%); color: var(--accent); font-weight: 700; }
+.small { font-size: .8em; color: var(--muted); }
+code { font-family: Consolas, ui-monospace, monospace; font-size: .9em; word-break: break-all; }

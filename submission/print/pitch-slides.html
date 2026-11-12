@@ -1,0 +1,69 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><title>OpenTab Global: pitch slides</title>
+<link rel="stylesheet" href="shared.css">
+<style>
+@page { size: 13.333in 7.5in; margin: 0; }
+.slide { width: 13.333in; height: 7.5in; padding: .7in .85in; page-break-after: always; display: flex; flex-direction: column; gap: .28in; overflow: hidden; font-size: 21pt; line-height: 1.35; position: relative; }
+.slide:last-child { page-break-after: auto; }
+.slide::after { content: "OpenTab Global · Stellar Testnet prototype"; position: absolute; bottom: .3in; left: .85in; font-size: 11pt; color: var(--muted); }
+.k { font-size: 14pt; text-transform: uppercase; letter-spacing: .08em; color: var(--accent); font-weight: 700; }
+h1 { font-size: 46pt; } h2 { font-size: 36pt; }
+ul { margin: 0; padding-left: .35in; } li { margin: .06in 0; }
+.title { background: var(--ink); color: #fff; justify-content: center; } .title h1 { font-size: 64pt; } .title .accent { color: #5eead4; }
+.title p { font-size: 26pt; color: #cbd5e1; max-width: 10in; } .title::after { color: #94a3b8; }
+.two { display: grid; grid-template-columns: 1fr 1fr; gap: .5in; align-items: start; }
+.flow { font-size: 16pt; } .shot { border: 2pt solid var(--line); border-radius: .12in; width: 100%; height: 4.3in; object-fit: cover; object-position: top; }
+.big { font-size: 30pt; font-weight: 700; }
+.note { font-size: 15pt; color: var(--muted); }
+</style></head><body>
+
+<section class="slide title"><div class="k" style="color:#5eead4">Blockchain Innovation Challenge · Problem Space 3</div>
+  <h1>OpenTab <span class="accent">Global</span></h1>
+  <p>Family support, spendable at the corner shop, approved on a phone with no data, settled on Stellar.</p></section>
+
+<section class="slide"><div class="k">The problem</div><h2>The money arrives. Then it has to become groceries.</h2>
+  <ul><li>Remittances are often collected as cash at a pickup counter first.</li>
+  <li>Many recipients have a phone but unreliable or costly mobile data.</li>
+  <li>Senders can&apos;t earmark support for essentials.</li>
+  <li>Small shops extend informal credit and carry the risk.</li></ul></section>
+
+<section class="slide"><div class="k">The solution</div><h2>A shared family balance, spendable at local shops</h2>
+  <div class="flow">
+    <div class="s"><span class="w">Sender · online</span><b>Funds</b>the balance</div>
+    <div class="s"><span class="w">Shop · online</span><b>Invoice QR</b>local price + exact charge</div>
+    <div class="s off"><span class="w">Phone · offline</span><b>Signs</b>that exact purchase</div>
+    <div class="s"><span class="w">Shop · online</span><b>Submits</b></div>
+    <div class="s"><span class="w">Stellar</span><b>Pays the shop</b>once</div>
+  </div>
+  <p>The family member needs <b>no internet, no crypto account and no XLM</b>. The shop sees “Payment confirmed” only after Stellar confirms.</p></section>
+
+<section class="slide"><div class="k">Live demo</div><h2>Real app, real Testnet transactions</h2>
+  <div class="two">
+    <img class="shot" src="../screenshots/05-family-offline-authorization.png" alt="Offline approval on the family phone">
+    <img class="shot" src="../screenshots/06-shop-payment-confirmed.png" alt="Shop payment confirmed">
+  </div>
+  <p class="note">Left: phone offline, “Authorized. Awaiting merchant settlement.” Right: shop after on-chain confirmation, with explorer link.</p></section>
+
+<section class="slide"><div class="k">Why Stellar</div><h2>The rules live in a Soroban contract, not our server</h2>
+  <div class="two"><ul><li>Each approval binds network, contract, token, family, shop, terminal, invoice, amount, price and expiry.</li>
+    <li>Each invoice can be paid once; replays are refused.</li>
+    <li>One balance across many shops; two shops can never overspend it together.</li></ul>
+  <ul><li>Native Ed25519 verification: no account needed for the shopper.</li>
+    <li>Stellar Asset Contracts hold and pay a dollar token.</li>
+    <li>Low fees, ~5 s finality, anchor ecosystem for future cash-out.</li></ul></div></section>
+
+<section class="slide"><div class="k">Technical proof</div><h2>Verified, not mocked</h2>
+  <ul><li>FamilyVault deployed: <code>CAUCH3MNJGIYDLOY3OB3YCKRCBWWY3J3HZB5QCHPJXUWXBMK5IABYLGW</code></li>
+  <li>Confirmed payments at two shops from one family balance; same approval replayed and refused.</li>
+  <li>34 contract tests · 13 protocol tests · 18 live API checks · 18 security checks · real-browser tests, including signing in an emulated offline browser.</li>
+  <li>Signing bytes produced by the browser are verified by the Rust contract tests.</li></ul>
+  <p class="note">Settlement token: OpenTab Demo USD (OTUSD), Testnet only, no value, not USDC.</p></section>
+
+<section class="slide"><div class="k">Opportunity and roadmap</div><h2>Shops paid with certainty; support spent on essentials</h2>
+  <div class="two"><div><p class="big">Business</p><ul><li>Small settlement fee is a possible model (not yet validated).</li>
+    <li>Shops replace informal credit with prepaid, verifiable payment.</li></ul></div>
+  <div><p class="big">Next</p><ul><li>Physical-device pilots</li><li>Both-offline mode: funds reserved for one named shop (in development)</li>
+    <li>Real USDC, then licensed local payout partners</li><li>Audit</li></ul></div></div></section>
+
+<section class="slide title"><h1>Your support.<br><span class="accent">Their everyday essentials.</span></h1>
+  <p>Testnet prototype · demo token has no value · illustrative exchange rates · no bank payouts yet · unaudited.</p></section>
+</body></html>

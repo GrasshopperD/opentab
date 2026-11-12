@@ -1,0 +1,86 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><title>OpenTab Global: trifold board</title>
+<!-- Format: standard tabletop trifold, 48 in wide x 36 in high; panels 12 in | 24 in | 12 in. Edit text here, re-render with scripts/render-print.mjs. -->
+<link rel="stylesheet" href="shared.css">
+<style>
+@page { size: 48in 36in; margin: 0; }
+body { width: 48in; height: 36in; display: grid; grid-template-columns: 12in 24in 12in; font-size: 34pt; line-height: 1.35; }
+.panel { padding: 1in .8in; height: 36in; overflow: hidden; display: flex; flex-direction: column; gap: .45in; }
+.left { background: #f4f8f7; } .right { background: #f4f8f7; } .center { background: #fff; border-left: 4pt solid var(--line); border-right: 4pt solid var(--line); }
+h1 { font-size: 150pt; } h2 { font-size: 66pt; color: var(--accent); } h3 { font-size: 46pt; margin-bottom: .15in; }
+.kicker { font-size: 30pt; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); font-weight: 700; }
+.lead { font-size: 52pt; line-height: 1.25; }
+ul { margin: 0; padding-left: .45in; } li { margin: .08in 0; }
+.story { background: #fff; border-left: 10pt solid var(--accent); padding: .35in .45in; border-radius: .2in; font-size: 34pt; }
+.flow { font-size: 30pt; } .flow .s { padding: .3in .25in; border-radius: .2in; } .flow .s + .s::before { left: -.32in; font-size: 34pt; }
+.shots { display: grid; grid-template-columns: 1.15fr .75fr .75fr; gap: .35in; align-items: start; }
+.shots figure { margin: 0; } .shots img { width: 100%; border: 3pt solid var(--line); border-radius: .2in; display: block; }
+.shots .crop { height: 15.5in; overflow: hidden; border-radius: .2in; }
+.shots .crop img { height: 100%; object-fit: cover; object-position: top; }
+.shots .crop img.mid { object-position: center 46%; }
+.shots figcaption { font-size: 26pt; color: var(--muted); margin-top: .1in; }
+.proof { background: #fff; border: 3pt solid var(--line); border-radius: .25in; padding: .35in .45in; }
+.pill { display: inline-block; font-size: 26pt; font-weight: 700; border-radius: 99pt; padding: .05in .25in; }
+.live { background: #eaf7ee; color: #166534; } .next { background: #fff4ec; color: #9a3412; }
+.fine { font-size: 22pt; color: var(--muted); margin-top: auto; }
+</style></head><body>
+
+<section class="panel left">
+  <div class="kicker">The problem</div>
+  <h2>Money arrives. Spending it shouldn&apos;t need a cash trip.</h2>
+  <ul>
+    <li>Remittances often become cash at a pickup counter before they can buy food or medicine.</li>
+    <li>Many recipients have phones but patchy or expensive mobile data.</li>
+    <li>Senders can&apos;t easily earmark support for everyday essentials.</li>
+    <li>Neighbourhood shops extend informal credit and carry the risk.</li>
+  </ul>
+  <div class="story"><h3>A household story</h3>
+    Maria works in Toronto and supports her mother Rosa in Oaxaca. Rosa buys groceries at the shop down her street.
+    With OpenTab, Rosa scans the shop&apos;s QR, approves on her phone with no data, and the shop is paid on Stellar
+    seconds later. No pickup counter, no cash to carry.</div>
+  <p class="fine">Illustrative household story. We have not yet run user interviews or pilots.</p>
+</section>
+
+<section class="panel center">
+  <div class="kicker">Problem Space 3 · Transnational Households</div>
+  <h1>OpenTab <span class="accent">Global</span></h1>
+  <p class="lead">A shared family spending balance on Stellar, spendable at local shops, approved on a phone <b>with no internet</b>.</p>
+  <div class="flow">
+    <div class="s"><span class="w">Sender · online</span><b>Funds</b>the family balance</div>
+    <div class="s"><span class="w">Shop · online</span><b>Invoice QR</b>local price + exact charge</div>
+    <div class="s off"><span class="w">Phone · offline</span><b>Signs</b>that exact purchase</div>
+    <div class="s"><span class="w">Shop · online</span><b>Submits</b>the approval</div>
+    <div class="s"><span class="w">Stellar</span><b>Pays the shop</b>once; replays refused</div>
+  </div>
+  <div class="shots">
+    <figure><div class="crop"><img src="../screenshots/06-shop-payment-confirmed.png" alt="Shop: payment confirmed on Stellar"></div>
+      <figcaption>Shop: “Payment confirmed” only after Stellar confirms (real Testnet tx)</figcaption></figure>
+    <figure><div class="crop"><img src="../screenshots/03-family-allowance.png" alt="Family wallet allowance"></div>
+      <figcaption>Family phone: allowance read from the contract</figcaption></figure>
+    <figure><div class="crop"><img class="mid" src="../screenshots/05-family-offline-authorization.png" alt="Offline approval QR"></div>
+      <figcaption>Offline: “Authorized. Awaiting merchant settlement.”</figcaption></figure>
+  </div>
+  <p class="fine">Screenshots are from the working app on Stellar Testnet. Demo token, illustrative exchange rate.</p>
+</section>
+
+<section class="panel right">
+  <div class="kicker">Built on Stellar</div>
+  <h2>Rules enforced by a smart contract</h2>
+  <ul>
+    <li><b>FamilyVault</b> (Soroban): family balances, phone keys, one-time invoices.</li>
+    <li>Phone signs 340 bytes binding network, contract, token, family, shop, terminal, invoice, amount, price, expiry.</li>
+    <li>Contract verifies Ed25519 natively: the family member needs <b>no account and no XLM</b>.</li>
+    <li>Stellar Asset Contract holds and pays the demo dollar token.</li>
+  </ul>
+  <div class="proof"><h3>Verified on Testnet</h3>
+    <ul><li>Contract <code>CAUCH3MN…ABYLGW</code> deployed</li>
+    <li>Payments at 2 shops from 1 balance</li>
+    <li>Replayed approval refused; overspend refused</li>
+    <li>34 contract · 13 protocol · 18 API · 18 security tests</li>
+    <li>Access-controlled demo; secrets never in the browser</li></ul></div>
+  <div><span class="pill live">Live</span> Connected shop, offline customer</div>
+  <div><span class="pill next">In development</span> Both offline: funds reserved for one named shop, running-total tickets, settle later</div>
+  <h3>Roadmap</h3>
+  <ul><li>Physical phone pilots</li><li>Real USDC</li><li>Licensed local payout partners</li><li>Audit</li></ul>
+  <p class="fine">Testnet prototype · OTUSD demo token has no value and is not USDC · exchange rates illustrative · no bank payouts · unaudited.</p>
+</section>
+</body></html>
