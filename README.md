@@ -358,8 +358,3 @@ Last recorded results (2026-11-13, see [`docs/BUILD_LOG.md`](docs/BUILD_LOG.md))
 3. Genuine Testnet USDC, then licensed payout partners where available. These would be future integrations, not current
    partners.
 4. Spending categories, an independent audit and pilots.
-
-## Disclosure
-
-Built with substantial AI assistance (Claude Code). The on-chain evidence above was produced by actually running the
-software, and you can check it on the Stellar Testnet explorer.
