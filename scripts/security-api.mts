@@ -44,8 +44,9 @@ const status = await (await fetch(BASE + "/api/auth/status", { headers: { cookie
 check("status reports authorized", status.authorized === true);
 const pub = await fetch(BASE + "/api/family/1");
 check("public read works without credentials", pub.status === 200);
-const home = await (await fetch(BASE + "/")).text();
-check("landing page public", home.includes("OpenTab Global"));
+const homeRes = await fetch(BASE + "/");
+const home = await homeRes.text();
+check("landing page public", homeRes.status === 200 && home.includes("OpenTab"));   // brand is "OpenTab" since the Product UI
 check("access code not in landing HTML", !!process.env.OT_DEMO_CODE && !home.includes(process.env.OT_DEMO_CODE));
 console.log(failures ? `\n${failures} FAILED` : "\nALL PASSED");
 process.exit(failures ? 1 : 0);

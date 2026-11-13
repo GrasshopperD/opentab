@@ -9,6 +9,14 @@ signed approval to a Soroban smart contract, which checks it and pays the shop i
 > **Stellar Testnet prototype.** The settlement token is **OpenTab Demo USD (`OTUSD`)**: a Testnet asset with no value,
 > **not USDC**. Exchange rates are **illustrative**, not live quotes. No bank payouts exist. Unaudited. Not a financial service.
 
+**Two modes, one app** (switch at the top of every page):
+- **Demo Mode** (`/demo`, `/demo/sender`, `/demo/family`, `/demo/shop`; also `/sender`, `/family`, `/shop`): the working
+  Stellar Testnet payment app. All real transactions (funding, pairing, offline approval, settlement, receipts) happen here.
+- **Product Mode** (`/home`, `/dashboard`, `/wallet`, `/business`, `/onboarding`): the consumer-facing design. It is a
+  read-only showcase of the same demo: Family #7's balance and confirmed purchases are read live from the FamilyVault
+  contract, and its action buttons open the matching Demo Mode screen. Role selection is not an account and not payment
+  authorization; no email is collected.
+
 Built for the Blockchain Innovation Challenge powered by Stellar (University of Waterloo / Velocity), Problem Space 3:
 Transnational Households.
 
