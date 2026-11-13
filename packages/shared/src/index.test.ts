@@ -103,6 +103,84 @@ describe("QR payloads", () => {
   });
 });
 
+describe("itemized invoices", () => {
+  const usd = (items: P.LineItem[]): P.Quote => ({ currency: "USD", localMinor: items.reduce((s, i) => s + i.unitMinor * BigInt(i.qty), 0n),
+    minorDigits: 2, rate: "1.0000", source: "ILLUSTRATIVE", items });
+  const itemInv = (items: P.LineItem[]) => { const q = usd(items); return invoice({ quote: q, amount: P.computeCharge(q) }); };
+  const milk = [{ name: "Milk", qty: 1, unitMinor: 300n }];
+
+  it("quote hash without items is unchanged (legacy vector still holds)", () => {
+    const q = quote();
+    expect(P.toHex(P.quoteHash({ ...q, items: undefined }, 1n))).toBe(P.toHex(P.quoteHash(q, 1n)));
+  });
+  it("items are bound into the signature; tampering with name, qty or unit price fails", () => {
+    const a = P.signInvoice(itemInv(milk), 1n, SECRET, NOW);
+    expect(a.invoice.amount).toBe(30_000_000n);                     // $3.00 at 1.0000 = 3 OTUSD
+    expect(P.verifyAuthorization(a)).toBe(true);
+    const swap = (it: P.LineItem[]) => ({ ...a, invoice: { ...a.invoice, quote: { ...a.invoice.quote, items: it } } });
+    expect(P.verifyAuthorization(swap([{ name: "Water", qty: 1, unitMinor: 300n }]))).toBe(false);
+    expect(P.verifyAuthorization(swap([{ name: "Milk", qty: 3, unitMinor: 100n }]))).toBe(false);
+    expect(P.verifyAuthorization(swap(undefined as any))).toBe(false);  // stripping items also breaks it
+    const back = P.parseAuthQR(P.encodeAuthQR(a));                    // survives the QR round trip
+    expect(back.invoice.quote.items).toEqual(milk);
+    expect(P.verifyAuthorization(back)).toBe(true);
+  });
+  it("rejects items that do not add up, bad names, bad quantities", () => {
+    const bad = itemInv(milk); bad.quote = { ...bad.quote, localMinor: 400n }; bad.amount = P.computeCharge(bad.quote);
+    expect(() => P.signInvoice(bad, 1n, SECRET, NOW)).toThrow(/add up/);
+    expect(() => P.signInvoice(itemInv([{ name: "Milk|x", qty: 1, unitMinor: 300n }]), 1n, SECRET, NOW)).toThrow(/name/);
+    expect(() => P.signInvoice(itemInv([{ name: "Milk", qty: 100, unitMinor: 300n }]), 1n, SECRET, NOW)).toThrow(/quantity/);
+    const o = JSON.parse(P.encodeInvoiceQR(itemInv(milk)).slice(5)); o.li[0][1] = 2;   // edited QR text
+    expect(() => P.parseInvoiceQR("OTI1:" + JSON.stringify(o))).toThrow(/add up/);
+  });
+});
+
+describe("merchant checks the approval against the displayed invoice", () => {
+  const milkQ: P.Quote = { currency: "USD", localMinor: 300n, minorDigits: 2, rate: "1.0000", source: "ILLUSTRATIVE", items: [{ name: "Milk", qty: 1, unitMinor: 300n }] };
+  const shown = invoice({ quote: milkQ, amount: P.computeCharge(milkQ) });
+  // What an app version from before itemized quotes does: its QR parser ignores `li`, so it signs and re-encodes without items.
+  const staleSign = (inv: P.Invoice) => {
+    const legacy = JSON.parse(P.encodeInvoiceQR(inv).slice(5)); delete legacy.li;
+    return P.parseAuthQR(P.encodeAuthQR(P.signInvoice(P.parseInvoiceQR("OTI1:" + JSON.stringify(legacy)), 1n, SECRET, NOW)));
+  };
+
+  it("exact itemized approval (after the QR round trip) matches", () => {
+    const a = P.parseAuthQR(P.encodeAuthQR(P.signInvoice(P.parseInvoiceQR(P.encodeInvoiceQR(shown)), 1n, SECRET, NOW)));
+    expect(P.verifyAuthorization(a)).toBe(true);
+    expect(P.authorizationMismatch(shown, a)).toBeNull();
+  });
+  it("valid non-itemized approval still matches its non-itemized invoice (backward compatible)", () => {
+    const plain = invoice();
+    expect(P.authorizationMismatch(plain, P.signInvoice(plain, 1n, SECRET, NOW))).toBeNull();
+  });
+  it("REGRESSION: an outdated app's approval of an itemized invoice is validly signed but rejected as OUTDATED_APP", () => {
+    const a = staleSign(shown);
+    expect(P.verifyAuthorization(a)).toBe(true);                     // the signature alone would have passed
+    expect(a.invoice.quote.items).toBeUndefined();
+    expect(P.authorizationMismatch(shown, a)).toBe("OUTDATED_APP");
+  });
+  it("any other signed difference is a MISMATCH (items, qty, price, terminal, expiry, merchant, amount, rate, currency, id)", () => {
+    const variants: P.Invoice[] = [
+      { ...shown, quote: { ...milkQ, items: [{ name: "Water", qty: 3, unitMinor: 100n }] } },
+      { ...shown, terminalId: 2 },
+      { ...shown, expiresAt: shown.expiresAt + 60n },
+      { ...shown, merchant: MERCHANT2 },
+      { ...shown, invoiceId: new Uint8Array(32).fill(0x22) },
+    ];
+    const q2: P.Quote = { ...milkQ, localMinor: 600n, items: [{ name: "Milk", qty: 2, unitMinor: 300n }] };
+    variants.push({ ...shown, quote: q2, amount: P.computeCharge(q2) });
+    const q3: P.Quote = { currency: "CAD", localMinor: 300n, minorDigits: 2, rate: "1.3900", source: "ILLUSTRATIVE", items: [{ name: "Milk", qty: 1, unitMinor: 300n }] };
+    variants.push({ ...shown, quote: q3, amount: P.computeCharge(q3) });
+    for (const v of variants) {
+      const a = P.signInvoice(v, 1n, SECRET, NOW);
+      expect(P.verifyAuthorization(a)).toBe(true);
+      expect(P.authorizationMismatch(shown, a)).toBe("MISMATCH");
+    }
+    // An outdated app signing a DIFFERENT invoice is still a plain mismatch, not "outdated".
+    expect(P.authorizationMismatch(shown, staleSign({ ...shown, terminalId: 9 }))).toBe("MISMATCH");
+  });
+});
+
 describe("amounts", () => {
   it("integer conversions", () => {
     expect(P.parseTokenAmount("12.5")).toBe(125000000n);

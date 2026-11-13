@@ -111,6 +111,8 @@ Without the server-side secrets the app clearly reports `NOT_CONFIGURED` instead
 | `NEXT_PUBLIC_MERCHANT_A_ADDRESS`, `NEXT_PUBLIC_MERCHANT_B_ADDRESS` | public | demo shop accounts |
 | `SENDER_SECRET`, `MERCHANT_A_SECRET`, `MERCHANT_B_SECRET` | **server-only** | Testnet demo signers (never prefix with `NEXT_PUBLIC_`) |
 | `DEMO_ACCESS_CODE`, `DEMO_SESSION_SECRET` | **server-only** | demo operator access; if missing, all signing endpoints are disabled |
+| `NEXT_PUBLIC_DEMO_FAMILY_ID` | public, optional | existing family the Sender screen preselects (default `7`); never created or funded automatically |
+| `INVITES_ENABLED` | server, optional | `1` turns on the **local-only** invitation-link pairing preview (set at build *and* start). Default off. Always off on Vercel/serverless: it needs a durable database that does not exist yet. Manual pairing is the supported flow. |
 
 ## Demo access (for judges and demonstrators)
 

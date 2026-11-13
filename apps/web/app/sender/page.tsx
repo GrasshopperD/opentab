@@ -2,29 +2,37 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { fingerprint, formatTokenAmount, parsePairingQR, toHex } from "@opentab/shared";
 import { api, DemoAccess, ERROR_TEXT, Scanner, TxLink } from "../components";
-import { MERCHANTS, TOKEN_CODE } from "@/lib/config";
+import { Invites } from "./invites";
+import { DEMO_FAMILY_ID, INVITES_UI, MERCHANTS, TOKEN_CODE } from "@/lib/config";
 
 const LS = "opentab.sender.families";
 const load = (): string[] => { try { return JSON.parse(localStorage.getItem(LS) || "[]"); } catch { return []; } };
 
 export default function Sender() {
   const [families, setFamilies] = useState<string[]>([]);
-  const [fam, setFam] = useState("");
+  const [fam, setFam] = useState(DEMO_FAMILY_ID); // demo preset: an EXISTING family; nothing is created or reset automatically
   const [info, setInfo] = useState<any>(null);
   const [busy, setBusy] = useState("");
   const [msg, setMsg] = useState<{ kind: string; text: string; hash?: string } | null>(null);
   const [amount, setAmount] = useState("10");
   const [pair, setPair] = useState<{ pub: string; label: string } | null>(null);
+  const [authorized, setAuthorized] = useState(false);
 
   const lock = useRef(false); // synchronous guard: a double-click cannot send two transactions
   const once = (f: () => Promise<void>) => async () => { if (lock.current) return; lock.current = true; try { await f(); } finally { lock.current = false; } };
 
-  useEffect(() => { const f = load(); setFamilies(f); if (f.length) setFam(f[f.length - 1]); }, []);
+  useEffect(() => { setFamilies(load()); }, []);
+  const [loading, setLoading] = useState(false);
+  const seq = useRef(0); // ignore out-of-order responses when the family number changes quickly
   const refresh = useCallback(async () => {
-    if (!fam) return;
+    const n = ++seq.current;
+    if (!fam) { setInfo(null); setLoading(false); return; }
+    setLoading(true);
     const r = await api(`/api/family/${fam}${pair ? "?key=" + pair.pub : ""}`);
-    setInfo(r);
+    if (n !== seq.current) return;
+    setInfo(r); setLoading(false);
   }, [fam, pair]);
+  useEffect(() => { setInfo(null); }, [fam]); // never show one family's balance under another's number
   useEffect(() => { refresh(); }, [refresh]);
 
   const show = (r: any, okText: string) => {
@@ -63,23 +71,37 @@ export default function Sender() {
   return (
     <>
       <h1>Sender</h1>
-      <DemoAccess />
+      <DemoAccess onChange={setAuthorized} />
       <p className="lead">Fund your family&apos;s spending balance and pair their phone.</p>
       <p className="muted">Demo sender: a Testnet account operated by this server holds {TOKEN_CODE} test tokens (no value).</p>
 
       <div className="card">
-        <h2>1 · Create or choose a family</h2>
+        <h2>1 · Family allowance</h2>
+        {fam === DEMO_FAMILY_ID ? (
+          <div className="status info" data-testid="demo-family-note">
+            Demo uses <b>existing Family #{DEMO_FAMILY_ID}</b>, already created and funded on Stellar Testnet.
+            Its balance below is read live from the contract. Nothing is created, funded or reset automatically.
+          </div>
+        ) : (
+          <div className="status pending">Viewing Family #{fam || "?"} (not the demo preset). <button className="btn ghost small" onClick={() => setFam(DEMO_FAMILY_ID)}>Back to demo Family #{DEMO_FAMILY_ID}</button></div>
+        )}
         <div className="row">
           <div><label>Family</label>
-            <select value={fam} onChange={(e) => setFam(e.target.value)}>
-              <option value="">Choose…</option>{families.map((x) => <option key={x} value={x}>Family #{x}</option>)}
+            <select value={families.includes(fam) || fam === DEMO_FAMILY_ID ? fam : ""} onChange={(e) => setFam(e.target.value)}>
+              <option value={DEMO_FAMILY_ID}>Family #{DEMO_FAMILY_ID} (demo)</option>
+              {families.filter((x) => x !== DEMO_FAMILY_ID).map((x) => <option key={x} value={x}>Family #{x}</option>)}
+              {!families.includes(fam) && fam !== DEMO_FAMILY_ID && <option value="">Other…</option>}
             </select></div>
           <div><label>Or enter family #</label><input inputMode="numeric" value={fam} onChange={(e) => setFam(e.target.value.replace(/\D/g, ""))} /></div>
         </div>
-        <label>Amount ({TOKEN_CODE}, max 50)</label>
+        <label>Top-up amount ({TOKEN_CODE}, max 50)</label>
         <input inputMode="decimal" value={amount} onChange={(e) => setAmount(e.target.value)} />
-        <button className="btn" disabled={!!busy} onClick={once(create)}>{busy === "create" ? "Creating on Stellar…" : "Create new family + fund"}</button>
-        <button className="btn ghost" disabled={!!busy || !fam} onClick={once(deposit)}>{busy === "deposit" ? "Depositing…" : "Top up selected family"}</button>
+        <button className="btn" disabled={!!busy || !fam || !info?.family} onClick={once(deposit)}>{busy === "deposit" ? "Depositing…" : `Top up Family #${fam || "?"}`}</button>
+        <details className="advanced">
+          <summary>Advanced: create a new family (not needed for the demo)</summary>
+          <p className="muted">Sends real Testnet transactions and funds the new family from the demo sender with the amount above.</p>
+          <button className="btn ghost" disabled={!!busy} onClick={once(create)}>{busy === "create" ? "Creating on Stellar…" : "Create new family + fund"}</button>
+        </details>
       </div>
 
       {fam && (
@@ -92,7 +114,7 @@ export default function Sender() {
 
       {f && (
         <div className="card">
-          <p className="muted">Family #{fam} · on-chain balance</p>
+          <p className="muted">Family #{fam} · on-chain balance · <b>status: active</b> (exists on the vault){loading ? " · refreshing…" : ""}</p>
           <div className="big">{formatTokenAmount(BigInt(f.balance))} <span className="muted">{TOKEN_CODE}</span></div>
           <dl className="kv">
             <dt>Deposited</dt><dd>{formatTokenAmount(BigInt(f.total_deposited))}</dd>
@@ -102,11 +124,19 @@ export default function Sender() {
           <button className="btn ghost small" onClick={refresh}>Refresh</button>
         </div>
       )}
-      {info?.error && <div className="status bad">{ERROR_TEXT[info.error] ?? info.error}</div>}
+      {fam && !f && loading && <div className="status pending">Reading Family #{fam} from Stellar Testnet…</div>}
+      {info?.error && !loading && (
+        <div className="status bad" data-testid="family-error">
+          Family #{fam} is unavailable: {ERROR_TEXT[info.error] ?? info.error}
+          {fam === DEMO_FAMILY_ID ? " The demo will not create a replacement automatically. Check the vault contract and network, or use Advanced below." : ""}
+        </div>
+      )}
+
+      {INVITES_UI && <Invites fam={fam} enabled={authorized && !!f} />}
 
       <div className="card">
-        <h2>2 · Pair a family member&apos;s phone</h2>
-        <p className="muted">On their phone open <b>Family</b> → it shows a pairing code containing only a public key. Scan it here.</p>
+        <h2>{INVITES_UI ? "3 · Fallback: manual pairing" : "2 · Pair a family member's phone"}</h2>
+        <p className="muted">{INVITES_UI ? "Kept during migration to invitations. " : ""}The family member opens <b>Family</b>, types the family number, and shows a pairing code containing only a public key. Scan it here.</p>
         <Scanner prompt="Scan pairing code" onResult={onPair} />
         {pair && (
           <>
@@ -120,7 +150,7 @@ export default function Sender() {
       </div>
 
       <div className="card">
-        <h2>3 · Purchases confirmed on Stellar</h2>
+        <h2>{INVITES_UI ? "4" : "3"} · Purchases confirmed on Stellar</h2>
         {!info?.payments?.length ? <p className="muted">No confirmed purchases in the recent event window.</p> : (
           <ul className="list">{info.payments.map((p: any) => (
             <li key={p.txHash + p.invoiceId}>{formatTokenAmount(BigInt(p.amount))} {TOKEN_CODE} at {name(p.merchant)} · terminal {p.terminalId}<br /><TxLink hash={p.txHash} /></li>

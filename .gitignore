@@ -64,3 +64,7 @@ submission/recordings/
 # Playwright output
 test-results/
 playwright-report/
+
+# Local invitation store (durable demo state; never commit)
+.data/
+**/.data/

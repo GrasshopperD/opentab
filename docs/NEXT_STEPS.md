@@ -8,6 +8,11 @@ Items marked **[USER]** need the user to do or approve something.
 
 ## Before 08:30 EST Nov 13 (priority order)
 
+- [x] Sender preset (Family #7) + product catalog + deployment-safety fixes (sessions 6-7, branch `ui-demo-catalog`, uncommitted).
+- [ ] **[USER]** Approve committing `ui-demo-catalog`, then merge/push and Vercel deploy (each needs explicit approval). Leave `INVITES_ENABLED` unset on Vercel.
+- [ ] Before the demo: open the deployed site online on the demo phone once (updates the cached app so it signs item lists); re-pair the phone to Family #7 via manual pairing.
+- [ ] Invitations for production: database-backed store, real funder accounts, contact verification (see BUILD_LOG session 6).
+
 - [x] Browser click-through of Sender -> Family -> Shop (Playwright, real Testnet, 5/5) and UI fixes (session 4).
 - [x] Demo access control + CSRF/rate/input limits on all signing endpoints (session 4, 18/18 checks).
 - [ ] **[USER]** Add GitHub remote for `opentab`, push (`docs/SESSION_HANDOFF.md` -> "Push to GitHub"). Make public when ready to submit.

@@ -84,3 +84,26 @@ h3 { font-size: 16px; margin: 14px 0 6px; }
 .shops { display: flex; flex-wrap: wrap; gap: 8px; margin: 6px 0; } .shops span { background: var(--bg); border: 1px solid var(--line); border-radius: 99px; padding: 4px 10px; font-size: 14px; }
 .settled { color: var(--ok); font-weight: 600; } .waiting { color: #7a5b00; font-weight: 600; }
 @media (max-width: 360px) { h1 { font-size: 25px; } .big { font-size: 28px; } .wrap { padding: 0 12px 56px; } .card { padding: 14px; } .row { flex-direction: column; gap: 0; } }
+
+/* Shop catalog + receipt */
+.seg { display: flex; gap: 6px; margin: 4px 0 12px; }
+.seg button { flex: 1; padding: 10px; border-radius: 10px; border: 1px solid var(--line, #d0d5dd); background: transparent; color: inherit; font: inherit; font-weight: 600; cursor: pointer; min-height: 44px; }
+.seg button.on { background: var(--ink); color: var(--bg, #fff); border-color: var(--ink); }
+.products { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; margin-bottom: 10px; }
+.product { display: flex; flex-direction: column; align-items: flex-start; gap: 2px; padding: 12px; border-radius: 12px; border: 2px solid var(--line, #d0d5dd); background: transparent; color: inherit; font: inherit; cursor: pointer; min-height: 56px; text-align: left; }
+.product.on { border-color: var(--ok); background: var(--ok-soft); }
+.product span { color: var(--muted); font-size: 14px; }
+.qty { display: flex; gap: 8px; align-items: center; } .qty input { text-align: center; max-width: 90px; margin: 0; }
+.advanced { margin-top: 8px; }
+.receipt { text-align: left; border: 1px dashed var(--line, #d0d5dd); border-radius: 12px; padding: 14px; margin: 10px 0; }
+.receipt-head { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 4px 12px; margin-bottom: 8px; }
+.receipt table { width: 100%; border-collapse: collapse; font-size: 15px; margin-bottom: 10px; }
+.receipt th, .receipt td { padding: 6px 4px; border-bottom: 1px solid var(--line, #e4e7ec); text-align: right; }
+.receipt th:first-child, .receipt td:first-child { text-align: left; }
+.receipt tfoot td { border-bottom: 0; }
+.receipt code { overflow-wrap: anywhere; font-size: 12px; }
+
+/* Invitations */
+.invite-link { border: 1px dashed var(--line); border-radius: 12px; padding: 12px; margin: 12px 0; }
+.list.invites li { padding: 12px 0; }
+.list.invites .status { margin: 6px 0; }

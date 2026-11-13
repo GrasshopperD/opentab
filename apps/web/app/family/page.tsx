@@ -5,7 +5,7 @@ import {
   parseInvoiceQR, publicKeyOf, signInvoice, toHex, type Invoice,
 } from "@opentab/shared";
 import { api, Online, QR, Scanner } from "../components";
-import { MERCHANTS, TOKEN_CODE, TOKEN_ID, VAULT_ID } from "@/lib/config";
+import { MERCHANTS, TOKEN_CODE, TOKEN_ID, VAULT_ID, INVITES_UI } from "@/lib/config";
 
 // TESTNET DEMO KEY STORAGE: the private key is kept in this browser's localStorage.
 // It never leaves the device. This is NOT production-grade custody.
@@ -87,7 +87,7 @@ export default function Family() {
       <div className="stepper" aria-label="Setup progress">
         <span className={sk ? "on" : ""} /><span className={sk && fam ? "on" : ""} /><span className={bal?.keyActive ? "on" : ""} />
       </div>
-      <p className="muted">{!sk ? "Step 1 of 3: create your key" : !fam ? "Step 2 of 3: enter your family number" : !bal?.keyActive ? "Step 3 of 3: ask the sender to pair this phone" : "Ready to pay at participating shops"}</p>
+      <p className="muted">{!sk ? "Step 1 of 3: create your key" : !fam ? (INVITES_UI ? "Step 2 of 3: open the invitation link from your sender" : "Step 2 of 3: enter your family number") : !bal?.keyActive ? "Step 3 of 3: ask the sender to pair this phone" : "Ready to pay at participating shops"}</p>
       {!sk ? (
         <div className="card">
           <h2>Set up this phone</h2>
@@ -103,7 +103,7 @@ export default function Family() {
             <p className="muted">Family #{fam || "?"} · {bal?.keyActive ? "this phone is authorized" : bal?.keyActive === false ? "this phone is NOT yet authorized" : "status needs connection"}</p>
             <div className="big">{bal?.balance ? formatTokenAmount(BigInt(bal.balance)) : "—"} <span className="muted">{TOKEN_CODE}</span></div>
             <p className="muted">Shared family balance on Stellar (last seen online). The chain decides what can be spent.</p>
-            <label>Family number (from the sender)</label>
+            <label>{INVITES_UI ? "Family number (set automatically by an invitation; manual fallback)" : "Family number (from the sender)"}</label>
             <input inputMode="numeric" value={fam} onChange={(e) => { const v = e.target.value.replace(/\D/g, ""); setFam(v); set(FAM, v); }} />
             <button className="btn ghost small" onClick={refresh}>Refresh balance</button>
           </div>
@@ -119,7 +119,8 @@ export default function Family() {
               <>
                 <dl className="kv">
                   <dt>Shop</dt><dd>{inv.merchantName}{known ? "" : " (unlisted)"}<br /><code>{inv.merchant.slice(0, 8)}…{inv.merchant.slice(-6)}</code></dd>
-                  <dt>Local price</dt><dd><b>{inv.quote.currency} {formatLocal(inv.quote.localMinor, inv.quote.minorDigits)}</b></dd>
+                  {inv.quote.items && <><dt>Items</dt><dd data-testid="items">{inv.quote.items.map((i, k) => <div key={k}>{i.name} × {i.qty} @ {inv.quote.currency} {formatLocal(i.unitMinor, inv.quote.minorDigits)}</div>)}</dd></>}
+                  <dt>{inv.quote.items ? "Total" : "Local price"}</dt><dd><b>{inv.quote.currency} {formatLocal(inv.quote.localMinor, inv.quote.minorDigits)}</b></dd>
                   <dt>Actual charge</dt><dd><b>{formatTokenAmount(inv.amount, 7)} {TOKEN_CODE}</b></dd>
                   <dt>Rate</dt><dd>{inv.quote.rate} {inv.quote.currency}/demo USD · {inv.quote.source === "ILLUSTRATIVE" ? "illustrative, not live" : inv.quote.source}</dd>
                   <dt>Expires</dt><dd>in ~{expMin} min</dd>

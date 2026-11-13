@@ -38,6 +38,7 @@ test("full journey: fund, pair, offline approve, settle on Stellar, replay rejec
   await op.goto("/sender");
   await unlock(op);
   await op.locator('label:has-text("Amount") + input').fill("3");
+  await op.getByText("Advanced: create a new family").click();
   await op.getByRole("button", { name: "Create new family + fund" }).click();
   const created = op.getByText(/Family #\d+ created and funded/);
   await expect(created).toBeVisible({ timeout: 90_000 });
@@ -62,7 +63,7 @@ test("full journey: fund, pair, offline approve, settle on Stellar, replay rejec
 
   // 6. Deposit more OTUSD
   await op.locator('label:has-text("Amount") + input').fill("2");
-  await op.getByRole("button", { name: "Top up selected family" }).click();
+  await op.getByRole("button", { name: `Top up Family #${familyId}` }).click();
   await expect(op.getByText("Deposited 2 OTUSD")).toBeVisible({ timeout: 90_000 });
   expect(await familyBalance(operator, familyId)).toBe(50_000_000n);
   await shot(op, "02-sender-dashboard");
@@ -80,8 +81,9 @@ test("full journey: fund, pair, offline approve, settle on Stellar, replay rejec
   const shop = await operator.newPage();
   await shop.goto("/shop");
   await expect(shop.getByText("Demo operator access active")).toBeVisible();
+  await shop.getByRole("tab", { name: "Custom amount" }).click();
   await shop.locator('label:has-text("Price") + input').fill("20.00");
-  await expect(shop.getByText("1.0857764 OTUSD")).toBeVisible();   // 20 MXN / 18.42, rounded up at 7 dp
+  await expect(shop.getByText("1.0857764 OTUSD", { exact: true })).toBeVisible();   // 20 MXN / 18.42, rounded up at 7 dp (recent-payments list may contain the same amount as a substring)
   await shop.getByRole("button", { name: "Show invoice QR" }).click();
   await expect(shop.locator(".qr img")).toBeVisible();
   const invoice = await shop.getByTestId("qr-text").first().inputValue();
@@ -161,6 +163,7 @@ test("interactive screens require demo access", async ({ page }) => {
   await page.locator("#democode").fill("definitely-wrong");
   await page.getByRole("button", { name: "Unlock demo" }).click();
   await expect(page.getByText("Incorrect demo access code.")).toBeVisible();
+  await page.getByText("Advanced: create a new family").click();
   await page.getByRole("button", { name: "Create new family + fund" }).click();
   await expect(page.getByText(/Demo access code required/)).toBeVisible();
 });
@@ -169,7 +172,7 @@ for (const width of [320, 375, 390, 430, 768, 1440]) {
   test(`mobile layout ${width}px has no horizontal overflow`, async ({ browser }) => {
     const ctx = await browser.newContext({ viewport: { width, height: 900 }, isMobile: true });
     const page = await ctx.newPage();
-    for (const path of ["/", "/demo", "/sender", "/family", "/shop"]) {
+    for (const path of ["/", "/demo", "/sender", "/family", "/shop", "/join"]) {
       await page.goto(path);
       await page.waitForLoadState("networkidle");
       const overflow = await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth);

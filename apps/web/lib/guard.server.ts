@@ -5,7 +5,7 @@
 // (anything that signs with a server-held Testnet key) calls `guard(req)`.
 // Fails CLOSED: if DEMO_ACCESS_CODE or DEMO_SESSION_SECRET is missing, mutations are disabled.
 import "server-only";
-import { createHmac, createHash, timingSafeEqual } from "node:crypto";
+import { createHmac, createHash, randomBytes, timingSafeEqual } from "node:crypto";
 import { NextResponse } from "next/server";
 
 export const COOKIE = "ot_demo";
@@ -23,13 +23,19 @@ function eq(a: string, b: string) {
 }
 
 export function checkCode(c: string) { return accessConfigured() && typeof c === "string" && eq(c, code()); }
-export function newSession(nowS = Math.floor(Date.now() / 1000)) { const exp = nowS + SESSION_S; return `${exp}.${hmac(String(exp))}`; }
-export function validSession(v: string | undefined, nowS = Math.floor(Date.now() / 1000)): boolean {
-  if (!v || !accessConfigured()) return false;
-  const [exp, sig] = v.split(".");
-  if (!/^\d+$/.test(exp ?? "") || !sig) return false;
-  return Number(exp) > nowS && eq(sig, hmac(exp));
+/** Cookie value: `<sid>.<exp>.<hmac(sid.exp)>`. `sid` (128 random bits) identifies ONE operator login (browser
+ *  session). It is NOT a user identity: everyone who knows the shared demo code is the same "demo operator". */
+export function newSession(nowS = Math.floor(Date.now() / 1000)) {
+  const sid = randomBytes(16).toString("base64url"); const exp = nowS + SESSION_S;
+  return `${sid}.${exp}.${hmac(`${sid}.${exp}`)}`;
 }
+export function sessionId(v: string | undefined, nowS = Math.floor(Date.now() / 1000)): string | null {
+  if (!v || !accessConfigured()) return null;
+  const [sid, exp, sig, extra] = v.split(".");
+  if (extra !== undefined || !/^[A-Za-z0-9_-]{22}$/.test(sid ?? "") || !/^\d+$/.test(exp ?? "") || !sig) return null;
+  return Number(exp) > nowS && eq(sig, hmac(`${sid}.${exp}`)) ? sid : null;
+}
+export function validSession(v: string | undefined, nowS = Math.floor(Date.now() / 1000)): boolean { return sessionId(v, nowS) !== null; }
 export function sessionCookie(value: string, maxAge = SESSION_S) {
   const secure = process.env.NODE_ENV === "production" ? "; Secure" : "";
   return `${COOKIE}=${value}; Path=/; HttpOnly; SameSite=Strict; Max-Age=${maxAge}${secure}`;
@@ -64,7 +70,7 @@ export function sameOrigin(req: Request): boolean {
 const deny = (status: number, error: string, detail: string) => NextResponse.json({ error, detail }, { status });
 
 /** Guard a state-changing request. Returns the parsed JSON body, or a Response to return. */
-export async function guard(req: Request, opts: { limit?: number; auth?: boolean } = {}): Promise<{ body: any } | { res: Response }> {
+export async function guard(req: Request, opts: { limit?: number; auth?: boolean } = {}): Promise<{ body: any; sid?: string } | { res: Response }> {
   const { limit = 20, auth = true } = opts;
   if (req.method !== "POST") return { res: deny(405, "MethodNotAllowed", "POST only") };
   if (!sameOrigin(req)) return { res: deny(403, "CrossOrigin", "Request must come from this site.") };
@@ -76,5 +82,6 @@ export async function guard(req: Request, opts: { limit?: number; auth?: boolean
   }
   const text = await req.text();
   if (text.length > MAX_BODY_BYTES) return { res: deny(413, "TooLarge", "Request body too large.") };
-  try { return { body: text ? JSON.parse(text) : {} }; } catch { return { res: deny(400, "BadJSON", "Malformed JSON") }; }
+  const sid = sessionId(readCookie(req)) ?? undefined;
+  try { return { body: text ? JSON.parse(text) : {}, sid }; } catch { return { res: deny(400, "BadJSON", "Malformed JSON") }; }
 }
