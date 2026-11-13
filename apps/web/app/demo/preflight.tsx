@@ -40,7 +40,7 @@ export function Preflight() {
           <ul className="checks">{data.public.map(row)}{routes.map(row)}</ul>
           <h3>Operator only</h3>
           {data.operator ? <ul className="checks">{data.operator.map(row)}</ul>
-            : <p className="muted">Unlock Sender or Shop with the demo access code to see signer and funding checks.</p>}
+            : <p className="muted">Signer and funding checks are shown to demo operators only. Sender and Shop need no access code.</p>}
           <p className="muted">Checked {data.checkedAt ? new Date(data.checkedAt).toLocaleTimeString() : "-"}</p>
         </>
       )}

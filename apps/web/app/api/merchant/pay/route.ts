@@ -13,7 +13,7 @@ const INFLIGHT = new Set<string>();
  */
 export async function POST(req: Request) {
   try {
-    const g = await guard(req, { limit: 20 });
+    const g = await guard(req, { limit: 20, auth: "public" });   // public demo action: the customer's signature is the authorization
     if ("res" in g) return g.res;
     const body = g.body;
     const m = MERCHANTS.find((x) => x.id === body.merchantId);

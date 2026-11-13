@@ -5,6 +5,41 @@ Only record results that were genuinely observed. Never record a planned step as
 
 ---
 
+## 2026-11-13: Session 12, public demo without an access code (branch `fix/public-demo-no-code` from `main` @ `c148cde`)
+
+- **Change (user request, Devpost accessibility):** the access-code form is removed from Sender and Merchant Checkout,
+  and the server no longer requires the operator session for the supported demo actions. No contract, signing protocol,
+  service worker, environment variable or Vercel configuration change. Product Mode files are unchanged.
+- **New access policy (server-enforced, `lib/guard.server.ts` + routes):**
+  - Public, no code: `POST /api/sender/deposit` and `POST /api/sender/key` (register) **for the demo family only**
+    (`NEXT_PUBLIC_DEMO_FAMILY_ID`, default 7); `POST /api/merchant/pay` (the customer's signature is the authorization).
+  - Still operator-only (existing session cookie from `/api/auth/login`; there is no UI form any more): revoking a device
+    (403 `OperatorOnly`), creating a family (401), depositing to or pairing with any other family (403 `DemoFamilyOnly`),
+    invitations.
+  - Unchanged: same-origin + JSON (CSRF), 4 KB body limit, per-path per-IP rate limits (deposit 10/min, key 10/min,
+    pay 20/min), 50 OTUSD deposit cap, off-chain signature, network, vault, token, merchant and expiry pre-checks, the
+    contract's signature, replay and balance checks, Testnet-only config. The fail-closed kill switch is kept: if
+    `DEMO_ACCESS_CODE` or `DEMO_SESSION_SECRET` is missing, every signing endpoint, public ones included, returns 503.
+- **Local results (production build, `next start` on port 3100, Stellar Testnet):**
+  - `npm run typecheck -w apps/web` clean; `npm run build` OK; `npm test` 20/20 + 23/23.
+  - `scripts/security-api.mts` (rewritten for the new policy, spends nothing): **23/23 PASS**. Public actions without a
+    code reach input validation (400); create family 401; other family 403 `DemoFamilyOnly`; revoke 403 `OperatorOnly`;
+    cross-origin 403; wrong code and forged cookie 401; operator session still works.
+  - Playwright without spending (`--grep-invert "full journey|preset family, Milk"`): **48 passed, 2 skipped**.
+  - Fresh browser contexts, **no code, no cookies**, real Testnet (level 4, all `successful: true` on Horizon):
+    - `demo-catalog.spec` (pair a new key on Family #7, Milk 3.00 OTUSD at Tienda Rosa, replay and tamper rejected):
+      passed on the third run; payment `09dbca2f7408b26c0468369d5c18383f54323d3a5dbf0d3854c6076d319b871b`. The first two
+      runs failed on a leftover test assertion for the removed access banner, after pairing; three `register_key`
+      transactions in total (`5074297e…`, `5cbffc03…`, `0f104509…`), fees only.
+    - Add Funds 1 OTUSD to Family #7 (scratch script, not committed): deposit
+      `965bbc477ca35d3370149e7b21639bfc4a7fa84db71a45b53c7d0325272c9a9b`; balance 57.00 -> 58.00 OTUSD.
+  - Not run: `checkout.spec` full journey (creates a new family, operator-only; updated to log in through the API) and
+    `invite.spec` (skipped unless invitations are enabled locally).
+- **Residual risk (not removable without new features):** anyone can pair a phone with Family #7 and spend its balance,
+  at the demo shops or, by calling the contract directly, to their own account, and can refill it from the demo sender
+  (50 OTUSD per request, 10 requests/min per IP per instance). At the start of this session the pool was 719 OTUSD
+  (sender) + 60 OTUSD (Family #7). Demo tokens have no value; recovery is re-issuing OTUSD from `opentab-issuer`.
+
 ## 2026-11-13: Session 11, pre-publication security audit and judge README (branch `docs/public-readme` from `main` @ `1688c08`)
 
 - **Scope:** documentation only (`README.md`, this log, `NEXT_STEPS.md`). No code, contract, config, environment or Vercel

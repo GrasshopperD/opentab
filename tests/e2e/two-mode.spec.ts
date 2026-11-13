@@ -133,7 +133,7 @@ test("the site root opens Demo Mode: / redirects to /demo, which introduces the 
   await expect(intro.getByRole("heading", { level: 1, name: "Judge Demo: OpenTab on Stellar Testnet" })).toBeVisible();
   await expect(intro).toContainText("Stellar Testnet, not Mainnet");
   await expect(intro).toContainText("no monetary value");
-  await expect(intro).toContainText("demo access code");
+  await expect(intro).toContainText("No access code needed");
   for (const tab of ["Sender", "Family", "Shop"]) await expect(intro.getByRole("link", { name: tab, exact: true })).toHaveAttribute("href", `/demo/${tab === "Shop" ? "shop" : tab.toLowerCase()}`);
   await expect(page.getByTestId("product-mode-note")).toContainText("read-only preview");
   await expect(switcher(page).getByRole("link", { name: "Demo Mode" })).toHaveAttribute("aria-current", "true");

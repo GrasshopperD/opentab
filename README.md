@@ -162,8 +162,8 @@ stellar contract invoke --id CAUCH3MNJGIYDLOY3OB3YCKRCBWWY3J3HZB5QCHPJXUWXBMK5IA
 ```text
  Phone / browser (PWA)                   Next.js server (Vercel)                  Stellar Testnet
  ─────────────────────                   ───────────────────────                  ───────────────
- Family wallet ─ key in this browser,    /api/sender/*   (access code) ── sign ─▶ FamilyVault (Soroban)
-   signs invoices offline                /api/merchant/pay (access code) ─ sign ─▶   └─ OTUSD Stellar Asset
+ Family wallet ─ key in this browser,    /api/sender/*   (guarded) ────── sign ─▶ FamilyVault (Soroban)
+   signs invoices offline                /api/merchant/pay (guarded) ───── sign ─▶   └─ OTUSD Stellar Asset
  Merchant Checkout ─ invoice / scan ──▶  /api/family, /api/merchant,                    Contract transfer
  Sender ─ fund, pair phones ──────────▶    /api/tx, /api/invoice (public reads) ─▶ Soroban RPC (simulate, events)
  Product Mode ─ read-only views ──────▶  Testnet demo signers in server-only env vars
@@ -208,8 +208,9 @@ live activity panel. The panel lists confirmed payments for demo Family #7 read 
 seconds.
 
 - **Family wallet** (`/demo/family`) is open to everyone.
-- **Sender** (`/demo/sender`) and **Merchant Checkout** (`/demo/shop`) spend from server-held Testnet accounts, so they
-  ask for a **demo access code**. The code is shared privately with judges and is not in this repository.
+- **Sender** (`/demo/sender`) and **Merchant Checkout** (`/demo/shop`) need **no access code**. Anyone can add funds to
+  demo Family #7 (up to 50 OTUSD per deposit), pair a phone with it and settle purchases. These screens spend from
+  server-held Testnet accounts, so creating families, revoking devices and acting on other families stay operator-only.
 - To try a full purchase, use two browser windows or two devices: one as Merchant Checkout and one as the Family wallet.
   Turn the family device's data off before approving.
 
@@ -223,7 +224,7 @@ A switch at the top of every page moves between the two modes.
 | What it is | The real working technical experience: funding, phone pairing, offline approval, on-chain settlement, receipts | The consumer-facing design of the same product |
 | Data | Real Stellar Testnet transactions | **Read-only.** Family #7's balance and confirmed purchases are read live from FamilyVault where supported |
 | Actions | Sign and submit real Testnet transactions | Buttons such as Add money, Scan to Pay and Open Merchant Checkout open the matching Demo Mode screen |
-| Accounts | Demo access code for Sender and Shop | None. Onboarding only records a role choice in a browser cookie; no email, and not payment authorization |
+| Accounts | None. Sender and Shop are open for demo Family #7 | None. Onboarding only records a role choice in a browser cookie; no email, and not payment authorization |
 
 ## Setup and running locally
 
@@ -248,7 +249,7 @@ npm run dev                              # http://localhost:3000
 | `NEXT_PUBLIC_FAMILY_VAULT_CONTRACT_ID`, `NEXT_PUBLIC_TOKEN_CONTRACT_ID`, `NEXT_PUBLIC_TOKEN_CODE`, `NEXT_PUBLIC_TOKEN_LABEL`, `NEXT_PUBLIC_TOKEN_ISSUER` | public | Deployed contract and demo token (prefilled) |
 | `NEXT_PUBLIC_MERCHANT_A_ADDRESS`, `NEXT_PUBLIC_MERCHANT_B_ADDRESS` | public | Demo shop accounts (prefilled) |
 | `SENDER_SECRET`, `MERCHANT_A_SECRET`, `MERCHANT_B_SECRET` | **server-only** | Testnet signers you provide. Never prefix with `NEXT_PUBLIC_`, never commit |
-| `DEMO_ACCESS_CODE` (≥ 8 chars), `DEMO_SESSION_SECRET` (≥ 32 random chars) | **server-only** | Operator access. If either is missing, every state-changing endpoint is disabled |
+| `DEMO_ACCESS_CODE` (≥ 8 chars), `DEMO_SESSION_SECRET` (≥ 32 random chars) | **server-only** | Operator-only actions (create family, revoke device, other families). Also the kill switch: if either is missing, every signing endpoint, public ones included, is disabled |
 | `NEXT_PUBLIC_DEMO_FAMILY_ID` | public, optional | Existing family shown by the demo (default `7`) |
 | `INVITES_ENABLED` | server, optional | Local-only invitation-link pairing preview. Always off on Vercel |
 
@@ -285,12 +286,13 @@ stellar contract build               # WASM into target/wasm32v1-none/release/
 ```
 
 Browser and API checks run against a running server: `npm run build && npm run start`, or set
-`OT_BASE_URL=https://opentabglobal.vercel.app`. `OT_DEMO_CODE` must hold the access code:
+`OT_BASE_URL=https://opentabglobal.vercel.app`. The security checks and the operator journeys need `OT_DEMO_CODE` set
+to the operator access code:
 
 ```bash
 npx playwright install chromium webkit
 npx playwright test --grep-invert "full journey|preset family, Milk"   # browser suite without on-chain spending
-npm run test:security                # 18 access-control, CSRF and input-limit checks (no spending)
+npm run test:security                # 23 access-control, CSRF and input-limit checks (no spending)
 ```
 
 `npm run test:e2e` (the full browser suite) and `npm run test:api` (the live API journey) **submit real Testnet
@@ -298,8 +300,8 @@ transactions** and spend demo tokens.
 
 Last recorded results (2026-11-13, see [`docs/BUILD_LOG.md`](docs/BUILD_LOG.md)):
 
-- Browser suite without spending: 48 passed and 2 skipped, both locally and against production.
-- Security checks: 18/18.
+- Browser suite without spending: 48 passed and 2 skipped.
+- Security checks: 23/23.
 - Unit tests: 20/20 and 23/23. Contract tests: 34/34 and 24/24.
 
 **Deploying to Vercel:**
@@ -314,14 +316,16 @@ Last recorded results (2026-11-13, see [`docs/BUILD_LOG.md`](docs/BUILD_LOG.md))
 **Security model:**
 
 - **Testnet only.** No real money, no Mainnet deployment, no production provider credentials.
-- **No secrets in the repository.** Signing keys, the access code and the session secret live only in server environment
+- **No secrets in the repository.** Signing keys, the operator access code and the session secret live only in server environment
   variables. `.env*` files are git-ignored apart from the empty template.
   - Before this repository was made public, its full Git history was checked: every branch and pull-request ref, scanned
     with gitleaks plus checksum-validated Stellar seed detection.
   - The test vector in `packages/shared/vectors/` uses a deliberately public test key (32 bytes of `0x07`). It is not
     registered for any family on chain.
-- **Demo access control.** The access code is exchanged for an HttpOnly, SameSite=Strict session cookie that lasts 8
-  hours. Every state-changing endpoint also:
+- **Public demo, operator-only administration.** Without a code, visitors can deposit to, pair phones with and pay from
+  demo Family #7 only. Creating families, revoking devices, acting on other families and invitations need an operator
+  session: the operator access code is exchanged for an HttpOnly, SameSite=Strict session cookie that lasts 8 hours.
+  Every state-changing endpoint also:
   - requires a same-origin JSON request;
   - limits the request body to 4 KB;
   - caps deposits at 50 OTUSD;
@@ -343,6 +347,9 @@ Last recorded results (2026-11-13, see [`docs/BUILD_LOG.md`](docs/BUILD_LOG.md))
 - **Both-offline payments (Mode B)** are not deployed. The contract exists with local tests only.
 - **Payment history is limited.** It comes from recent Soroban RPC events and covers about the last day.
 - **Rate limits are best effort.** They are held in memory per serverless instance, not as a global quota.
+- **The open demo family can be emptied by anyone.** Any visitor can pair a phone with Family #7 and spend its balance:
+  at the demo shops, or by calling the contract directly, to any account they control. It is refilled from the server's
+  demo sender. The tokens have no value, and the team re-issues OTUSD from its Testnet issuer if the demo pool runs low.
 - **Known dependency advisory.** `npm audit` reports a PostCSS advisory through Next.js, which processes only our own CSS
   at build time. The fix requires upgrading to Next 16 and is deferred.
 

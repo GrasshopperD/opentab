@@ -4,7 +4,7 @@ import {
   authorizationMismatch, computeCharge, encodeInvoiceQR, formatLocal, formatTokenAmount, parseAuthQR, parseInvoiceQR, parseLocalAmount,
   randomBytes, toHex, verifyAuthorization, type Invoice, type PaymentStatus, type Quote,
 } from "@opentab/shared";
-import { api, DemoAccess, ERROR_TEXT, QR, Scanner, TxLink } from "../components";
+import { api, ERROR_TEXT, QR, Scanner, TxLink } from "../components";
 import { CATALOG, CATALOG_CURRENCY, DEMO_RATES, MERCHANTS, NETWORK_PASSPHRASE, RATE_SOURCE, TOKEN_CODE, TOKEN_ID, VAULT_ID } from "@/lib/config";
 
 const CUR = "opentab.shop.current";
@@ -211,7 +211,6 @@ export default function Shop() {
     <>
       <h1>Merchant Checkout</h1>
       <p className="lead">Select a product and accept payment.</p>
-      <DemoAccess />
 
       {!c && (
         <div className="card">

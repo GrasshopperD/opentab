@@ -1,7 +1,7 @@
 "use client";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { fingerprint, formatTokenAmount, parsePairingQR, toHex } from "@opentab/shared";
-import { api, DemoAccess, ERROR_TEXT, Scanner, TxLink } from "../components";
+import { api, ERROR_TEXT, Scanner, TxLink } from "../components";
 import { Invites } from "./invites";
 import { DEMO_FAMILY_ID, INVITES_UI, MERCHANTS, TOKEN_CODE } from "@/lib/config";
 
@@ -19,13 +19,13 @@ export default function Sender() {
   const [amount, setAmount] = useState("10");
   const [createAmount, setCreateAmount] = useState("10");
   const [pair, setPair] = useState<{ pub: string; label: string } | null>(null);
-  const [authorized, setAuthorized] = useState(false);
+  const [authorized, setAuthorized] = useState(false); // operator session (revoke, create, other families); not needed for the demo
   const [view, setView] = useState<View>("home");
 
   const lock = useRef(false); // synchronous guard: a double-click cannot send two transactions
   const once = (f: () => Promise<void>) => async () => { if (lock.current) return; lock.current = true; try { await f(); } finally { lock.current = false; } };
 
-  useEffect(() => { setFamilies(load()); }, []);
+  useEffect(() => { setFamilies(load()); api("/api/auth/status").then((s: any) => setAuthorized(s.authorized === true)); }, []);
   const [loading, setLoading] = useState(false);
   const seq = useRef(0); // ignore out-of-order responses when the family number changes quickly
   const refresh = useCallback(async () => {
@@ -92,7 +92,6 @@ export default function Sender() {
     <>
       <h1>Sender</h1>
       <p className="lead">Manage your family&apos;s funds and who can spend.</p>
-      <DemoAccess onChange={setAuthorized} />
 
       {/* Main family wallet card: the selected family, its confirmed balance and the two primary actions. */}
       <div className="card" data-testid="wallet">
@@ -157,7 +156,9 @@ export default function Sender() {
                 {info?.keyActive === true ? (
                   <>
                     <div className="status ok">This device is already authorized for Family #{fam} on Stellar.</div>
-                    <button className="btn danger" disabled={!!busy} onClick={once(() => keyAction("revoke"))}>{busy === "revoke" ? "Revoking on Stellar…" : "Revoke this device"}</button>
+                    {authorized
+                      ? <button className="btn danger" disabled={!!busy} onClick={once(() => keyAction("revoke"))}>{busy === "revoke" ? "Revoking on Stellar…" : "Revoke this device"}</button>
+                      : <p className="muted">Revoking a device is an operator action and is turned off in the public demo.</p>}
                   </>
                 ) : (
                   <>
@@ -210,10 +211,10 @@ export default function Sender() {
               </>
             )}
             <h3>Create a new family</h3>
-            <p className="muted">Not needed for the demo. Sends real Testnet transactions: the server creates the family and makes the starting deposit below in the same step (it has no create-without-deposit call).</p>
+            <p className="muted">Not needed for the demo, and turned off in the public demo (operator only). It sends real Testnet transactions: the server creates the family and makes the starting deposit below in the same step (it has no create-without-deposit call).</p>
             <label htmlFor="create-amount">Starting deposit ({TOKEN_CODE}, max 50)</label>
             <input id="create-amount" inputMode="decimal" value={createAmount} onChange={(e) => setCreateAmount(e.target.value)} />
-            <button className="btn ghost" disabled={!!busy} onClick={once(create)}>{busy === "create" ? "Creating on Stellar…" : "Create new family + fund"}</button>
+            <button className="btn ghost" disabled={!!busy || !authorized} onClick={once(create)}>{busy === "create" ? "Creating on Stellar…" : "Create new family + fund"}</button>
           </details>
           <p className="muted">Planned: spending categories, withdrawals UI, merchant-reserved offline allowances.</p>
         </>
