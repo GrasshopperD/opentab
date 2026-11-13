@@ -53,6 +53,24 @@ Only record results that were genuinely observed. Never record a planned step as
   - Accurate setup, environment and test commands, including which tests spend Testnet tokens.
   - Security considerations and limitations.
   - A clearly marked demo-video placeholder.
+- **Release:**
+  - PR #5 was merged normally as main `13c243c`, whose tree is identical to the tested `aaa7ee2`. Only those 3
+    documentation files changed since `1688c08`.
+  - The history rescan covered all 24 commits: 0 seeds and 0 real-secret matches. gitleaks reported only the same 5
+    public contract-ID false positives.
+  - Vercel `opentabglobal` production deployment `HyehPVEzNKSbyJ2ehWub2juoPetm` succeeded.
+- **Production check:**
+  - `/` returns 307 → `/demo`, and the judge intro is present.
+  - The 4 Demo pages and 5 Product pages each return 200.
+  - `/api/family/7` reads live, `/api/auth/status` returns `enabled: true`, and invite creation returns 503.
+- **Visibility:** `GrasshopperD/opentab` was switched from PRIVATE to **PUBLIC** with `gh repo edit` (admin account).
+- **Signed-out verification:**
+  - Repository page returns 200, the anonymous API shows `private: false`, and raw `README.md` on main returns 200.
+  - In a fresh Chromium with no GitHub session, the README shows all 14 sections and the Mermaid sequence diagram
+    renders.
+- **After publishing, against production:**
+  - Playwright without spending: 48 passed, 2 skipped (Chromium plus emulated iPhone WebKit).
+  - `scripts/security-api.mts`: ALL PASSED.
 
 ## 2026-11-13: Session 10, Demo Mode as the default judge experience (branch `release/demo-default` from `main` @ `213e496`)
 
