@@ -39,6 +39,18 @@ Only record results that were genuinely observed. Never record a planned step as
   at the demo shops or, by calling the contract directly, to their own account, and can refill it from the demo sender
   (50 OTUSD per request, 10 requests/min per IP per instance). At the start of this session the pool was 719 OTUSD
   (sender) + 60 OTUSD (Family #7). Demo tokens have no value; recovery is re-issuing OTUSD from `opentab-issuer`.
+- **Release:** PR #7 merged as `main` @ `5a4d3e9`. The user chose to deploy **without** topping up the demo sender (718
+  OTUSD after the local test deposit). Vercel commit status for `5a4d3e9`: `opentabglobal` success
+  (deployment `wv36c3R4uBo9h19q4gLfkNerbjy7`), `opentab` success. No Vercel or environment change.
+- **Production checks (https://opentabglobal.vercel.app, no transactions submitted):**
+  - `/api/preflight`: 6/6 public checks OK, including "Public demo enabled: Sender and Shop open without an access code
+    (demo Family #7)". `/api/auth/status` `{"authorized":false,"enabled":true}`. `/` 307 to `/demo`; the 11 Demo and
+    Product routes return 200.
+  - `scripts/security-api.mts`: **23/23 PASS**.
+  - Playwright without spending, `OT_DEMO_CODE` unset (fresh contexts): **48 passed, 2 skipped**, including "public demo
+    needs no access code; operator-only actions stay off".
+  - Not done on production: a real deposit, pairing or payment (the standing rule is to ask first). The same code path was
+    exercised against the same Testnet accounts and Family #7 from the local production build (above).
 
 ## 2026-11-13: Session 11, pre-publication security audit and judge README (branch `docs/public-readme` from `main` @ `1688c08`)
 
