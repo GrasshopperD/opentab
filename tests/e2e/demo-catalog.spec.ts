@@ -3,6 +3,7 @@
 // Never creates, funds or resets a family. Needs OT_DEMO_CODE and a running app.
 import { expect, test, type BrowserContext, type Page } from "@playwright/test";
 import * as fs from "node:fs";
+import { paste } from "./helpers";
 
 const CODE = process.env.OT_DEMO_CODE ?? "";
 const FAMILY = process.env.OT_DEMO_FAMILY ?? "7";
@@ -12,11 +13,6 @@ async function unlock(page: Page) {
   await page.locator("#democode").fill(CODE);
   await page.getByRole("button", { name: "Unlock demo" }).click();
   await expect(page.getByText("Demo operator access active")).toBeVisible();
-}
-async function paste(page: Page, text: string) {
-  await page.getByText("Paste code instead").click();
-  await page.getByPlaceholder("OTI1:… / OTA1:… / OTK1:…").fill(text);
-  await page.getByRole("button", { name: "Use pasted code" }).click();
 }
 const api = async (ctx: BrowserContext, path: string) => (await ctx.request.get(path)).json();
 const familyBalance = async (ctx: BrowserContext) => BigInt((await api(ctx, `/api/family/${FAMILY}`)).family.balance);
@@ -50,13 +46,19 @@ test("preset family, Milk $3.00, offline approval, settlement, itemized receipt,
   await ph.getByRole("button", { name: "Create my key" }).click();
   const pairing = await ph.getByTestId("qr-text").first().inputValue();
   await ph.locator('label:has-text("Family number") + input').fill(FAMILY);
+  await expect(ph.getByText("Waiting for your sender to authorize this device")).toBeVisible();
+  await ph.screenshot({ path: `${OUT}/5-phone-before-pairing.png`, fullPage: true });
+  await op.getByRole("button", { name: "Pair Family Member" }).click();
   await paste(op, pairing);
   await op.getByRole("button", { name: `Authorize for family #${FAMILY}` }).click();
   await expect(op.getByText("Phone paired")).toBeVisible({ timeout: 90_000 });
+  await op.screenshot({ path: `${OUT}/6-sender-after-pairing.png`, fullPage: true });
   await ph.reload();
   await ph.waitForFunction(() => navigator.serviceWorker?.controller != null, null, { timeout: 30_000 });
   await ph.getByRole("button", { name: "Refresh balance" }).click();
   await expect(ph.getByText("this phone is authorized")).toBeVisible();
+  await expect(ph.getByRole("button", { name: "Scan to Pay" })).toBeVisible();
+  await ph.screenshot({ path: `${OUT}/7-phone-connected-wallet.png`, fullPage: true });
 
   // 3. Shop: catalog is the default; Milk x1 = USD 3.00 = 3.0000000 OTUSD at the illustrative 1.0000 rate.
   const shop = await operator.newPage();
@@ -71,7 +73,7 @@ test("preset family, Milk $3.00, offline approval, settlement, itemized receipt,
   await expect(shop.getByTestId("line")).toHaveText("Milk × 1 @ USD 3.00");
   await expect(shop.locator(".kv dd b", { hasText: /^USD 3\.00$/ })).toBeVisible();   // Total row
   await expect(shop.getByText("3.0000000 OTUSD", { exact: true })).toBeVisible();   // charge row (balance line also ends in ...3.0000000)
-  await shop.getByRole("button", { name: "Show invoice QR" }).click();
+  await shop.getByRole("button", { name: "Generate Invoice QR" }).click();
   await expect(shop.locator(".qr img")).toBeVisible();
   const invoice = await shop.getByTestId("qr-text").first().inputValue();
   expect(JSON.parse(invoice.slice(5)).li).toEqual([["Milk", 1, "300"]]);
@@ -81,11 +83,14 @@ test("preset family, Milk $3.00, offline approval, settlement, itemized receipt,
   await phone.setOffline(true);
   const offlineApi: string[] = [];
   ph.on("request", (r) => { if (r.url().includes("/api/")) offlineApi.push(r.url()); });
+  await ph.getByRole("button", { name: "Scan to Pay" }).click();
   await paste(ph, invoice);
   await expect(ph.getByTestId("items")).toHaveText("Milk × 1 @ USD 3.00");
+  await ph.screenshot({ path: `${OUT}/8-phone-review-payment.png`, fullPage: true });
   await expect(ph.getByText("3.0000000 OTUSD", { exact: true })).toBeVisible();
   await ph.getByRole("button", { name: /^Approve / }).click();
-  await expect(ph.getByText("Authorized. Awaiting merchant settlement.")).toBeVisible();
+  await expect(ph.getByRole("heading", { name: "Payment Authorized" })).toBeVisible();
+  await expect(ph.getByText("Waiting for merchant settlement.")).toBeVisible();
   const auth = await ph.getByTestId("qr-text").first().inputValue();
   expect(offlineApi, "no API calls while signing offline").toEqual([]);
   await ph.screenshot({ path: `${OUT}/3-phone-offline-approval.png`, fullPage: true });
@@ -102,9 +107,10 @@ test("preset family, Milk $3.00, offline approval, settlement, itemized receipt,
 
   // 6. Genuine approval: submit and wait for Stellar confirmation.
   const mBefore = await merchantBalance(operator);
-  await shop.getByPlaceholder("OTI1:… / OTA1:… / OTK1:…").fill(auth);
-  await shop.getByRole("button", { name: "Use pasted code" }).click();
+  await paste(shop, auth);
+  await expect(shop.getByText(/Authorization Verified/)).toBeVisible();
   await expect(shop.getByText(/NOT PAID until Stellar confirms/)).toBeVisible();
+  await shop.screenshot({ path: `${OUT}/9-shop-authorization-verified.png`, fullPage: true });
   await shop.getByRole("button", { name: "Submit to Stellar" }).dblclick();
   await expect(shop.getByText(/Payment confirmed on Stellar/)).toBeVisible({ timeout: 90_000 });
   const href = await shop.locator(".success a.txlink").first().getAttribute("href");
@@ -136,7 +142,8 @@ test("preset family, Milk $3.00, offline approval, settlement, itemized receipt,
   expect(await merchantBalance(operator)).toBe(mBefore + 30_000_000n);
 
   // 10. Receipt survives reload (local record) and exports as CSV
-  await shop.getByRole("button", { name: "New sale" }).click();
+  await shop.getByRole("button", { name: "New Sale" }).click();
+  await expect(shop.getByRole("button", { name: "Generate Invoice QR" })).toBeVisible();   // reset to product selection
   await shop.reload();
   await expect(shop.getByTestId("receipt-log")).toContainText("Milk × 1");
   const [dl] = await Promise.all([shop.waitForEvent("download"), shop.getByRole("button", { name: "Export CSV" }).click()]);
@@ -146,6 +153,7 @@ test("preset family, Milk $3.00, offline approval, settlement, itemized receipt,
   expect(csv).toContain(`"Milk","1","3.00","3.00","USD","3.00","3.0000000","${hash}","CONFIRMED"`);
 
   // 11. Unavailable family shows a clear error and creates nothing
+  await op.getByText("Advanced: family management").click();
   await op.locator('label:has-text("Or enter family #") + input').fill("999999");
   await expect(op.getByTestId("family-error")).toContainText("Family #999999 is unavailable");
   expect(createCalls, "no family was created").toEqual([]);

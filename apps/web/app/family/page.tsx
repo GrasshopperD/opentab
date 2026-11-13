@@ -10,30 +10,55 @@ import { MERCHANTS, TOKEN_CODE, TOKEN_ID, VAULT_ID, INVITES_UI } from "@/lib/con
 // TESTNET DEMO KEY STORAGE: the private key is kept in this browser's localStorage.
 // It never leaves the device. This is NOT production-grade custody.
 const SK = "opentab.family.sk", FAM = "opentab.family.id", NAME = "opentab.family.name", HIST = "opentab.family.history";
+// Last answer from Stellar for THIS family + key (balance and authorization) and when it was read. Lets a connected
+// phone open its wallet offline without re-pairing; always shown as "last synced", never as freshly checked.
+const SYNC = "opentab.family.sync";
 const get = (k: string) => { try { return localStorage.getItem(k) || ""; } catch { return ""; } };
 const set = (k: string, v: string) => { try { localStorage.setItem(k, v); } catch { /* storage blocked */ } };
 
 interface Hist { invoiceId: string; familyId?: string; merchant: string; amount: string; local: string; at: number; status: "AUTHORIZED_LOCALLY"; settled?: boolean }
+interface Sync { fam: string; pub: string; balance: string; keyActive: boolean; at: number }
+/** "" = not checked yet this visit; "checking"; "ok" = Stellar answered now; "offline"; otherwise an API error code. */
+type Check = "" | "checking" | "ok" | "offline" | string;
 
 export default function Family() {
   const [sk, setSk] = useState("");
   const [fam, setFam] = useState("");
   const [name, setName] = useState("");
-  const [bal, setBal] = useState<{ balance?: string; keyActive?: boolean; error?: string } | null>(null);
+  const [sync, setSync] = useState<Sync | null>(null);
+  const [check, setCheck] = useState<Check>("");
+  const [paying, setPaying] = useState(false);
   const [inv, setInv] = useState<Invoice | null>(null);
   const [err, setErr] = useState("");
   const [authQR, setAuthQR] = useState("");
   const [hist, setHist] = useState<Hist[]>([]);
 
-  useEffect(() => { const k = get(SK); setSk(/^[0-9a-f]{64}$/.test(k) ? k : ""); setFam(/^\d{1,12}$/.test(get(FAM)) ? get(FAM) : ""); setName(get(NAME)); try { setHist(JSON.parse(get(HIST) || "[]")); } catch { } }, []);
+  useEffect(() => {
+    const k = get(SK); setSk(/^[0-9a-f]{64}$/.test(k) ? k : ""); setFam(/^\d{1,12}$/.test(get(FAM)) ? get(FAM) : ""); setName(get(NAME));
+    try { setHist(JSON.parse(get(HIST) || "[]")); } catch { }
+    try { const s = JSON.parse(get(SYNC) || "null"); if (s && typeof s.fam === "string" && typeof s.pub === "string") setSync(s); } catch { }
+  }, []);
   const pub = sk ? toHex(publicKeyOf(fromHex(sk))) : "";
+  const synced = sync && sync.fam === fam && sync.pub === pub ? sync : null;   // cache is only valid for this family + key
+  const connected = !!sk && !!fam && synced?.keyActive === true;
 
   const refresh = useCallback(async () => {
-    if (!fam || !pub || !navigator.onLine) return;
-    const r = await api(`/api/family/${fam}?key=${pub}`).catch(() => null);
-    if (r) setBal(r.error ? { error: r.error } : { balance: r.family.balance, keyActive: r.keyActive });
+    if (!fam || !pub) return;
+    if (!navigator.onLine) { setCheck("offline"); return; }
+    setCheck("checking");
+    const r = await api(`/api/family/${fam}?key=${pub}`);
+    if (r.error) { setCheck(r.error === "NetworkError" ? "offline" : r.error); return; }
+    const s: Sync = { fam, pub, balance: String(r.family.balance), keyActive: r.keyActive === true, at: Date.now() };
+    setSync(s); set(SYNC, JSON.stringify(s)); setCheck("ok");
   }, [fam, pub]);
   useEffect(() => { refresh(); }, [refresh]);
+
+  // Onboarding step 3: while waiting for the sender, re-check Stellar every few seconds (online, page visible).
+  useEffect(() => {
+    if (connected || !sk || !fam) return;
+    const t = setInterval(() => { if (navigator.onLine && document.visibilityState === "visible") refresh(); }, 5000);
+    return () => clearInterval(t);
+  }, [connected, sk, fam, refresh]);
 
   // When online, ask the chain whether each local approval has been settled by the shop.
   const checkSettled = useCallback(async () => {
@@ -49,14 +74,22 @@ export default function Family() {
   useEffect(() => {
     checkSettled();
     const on = () => { refresh(); checkSettled(); };
-    window.addEventListener("online", on);
-    return () => window.removeEventListener("online", on);
+    const off = () => setCheck("offline");   // the shown balance is now a last-synced value, not a fresh check
+    window.addEventListener("online", on); window.addEventListener("offline", off);
+    return () => { window.removeEventListener("online", on); window.removeEventListener("offline", off); };
   }, [checkSettled, refresh]);
+  // While the signed approval is on screen and the phone happens to be online, notice the shop's settlement.
+  useEffect(() => {
+    if (!authQR) return;
+    const t = setInterval(checkSettled, 5000);
+    return () => clearInterval(t);
+  }, [authQR, checkSettled]);
 
   function setup() {
     if (sk && !confirm("Replace this phone's key? Any family must re-authorize the new key.")) return;
     const k = toHex(generateSecretKey()); set(SK, k); setSk(k);
   }
+  const changeFam = (v: string) => { setFam(v); set(FAM, v); setCheck(""); };
   const onInvoice = useCallback((t: string) => {
     setErr(""); setAuthQR("");
     try {
@@ -77,92 +110,187 @@ export default function Family() {
       const nh = [h, ...hist].slice(0, 20); setHist(nh); set(HIST, JSON.stringify(nh));
     } catch (e: any) { setErr(e.message); }
   }
+  const startPay = () => { setErr(""); setInv(null); setAuthQR(""); setPaying(true); };
+  const endPay = () => { setErr(""); setInv(null); setAuthQR(""); setPaying(false); refresh(); };
 
   const known = inv && MERCHANTS.find((m) => m.address === inv.merchant);
   const expMin = inv ? Math.max(0, Math.round((Number(inv.expiresAt) * 1000 - Date.now()) / 60000)) : 0;
+  const thisApproval = inv && hist.find((h) => h.invoiceId === toHex(inv.invoiceId));
+  const fp = sk ? fingerprint(publicKeyOf(fromHex(sk))) : "";
+  const pairingQR = sk ? <QR value={encodePairingQR(name || "phone", publicKeyOf(fromHex(sk)))} label="Pairing code" /> : null;
+  const syncLine = synced && (check === "ok"
+    ? `Confirmed on Stellar at ${new Date(synced.at).toLocaleTimeString()}.`
+    : `Last synced with Stellar ${new Date(synced.at).toLocaleString()}${check === "offline" ? " · you are offline, so this is not a fresh check" : ""}.`);
 
+  // ---------------- Scan to Pay: scan -> review -> signed approval ----------------
+  if (paying) {
+    const step = authQR ? 2 : inv ? 1 : 0;
+    return (
+      <>
+        <h1>Family Wallet <Online /></h1>
+        <ol className="progress" style={{ gridTemplateColumns: "repeat(3, 1fr)" }} aria-label="Payment steps">
+          {["Scan merchant QR", "Review payment", "Show approval"].map((s, i) => <li key={s} className={i < step ? "done" : i === step ? "on" : ""}>{i + 1}. {s}</li>)}
+        </ol>
+        <div className="card">
+          {step === 0 && (
+            <>
+              <h2>Step 1 · Scan merchant QR</h2>
+              <p className="muted">Point the camera at the shop&apos;s invoice QR. No internet needed: this phone checks and signs locally.</p>
+              <Scanner prompt="Open camera" onResult={onInvoice} autoStart />
+              {err && <div className="status bad">{err}</div>}
+              <button className="btn ghost" onClick={endPay}>← Back to wallet</button>
+            </>
+          )}
+          {step === 1 && inv && (
+            <>
+              <h2>Step 2 · Review payment</h2>
+              <dl className="kv">
+                <dt>Merchant</dt><dd><b>{inv.merchantName}</b>{known ? "" : " (unlisted)"}<br /><code>{inv.merchant.slice(0, 8)}…{inv.merchant.slice(-6)}</code></dd>
+                {inv.quote.items && <><dt>Items</dt><dd data-testid="items">{inv.quote.items.map((i, k) => <div key={k}>{i.name} × {i.qty} @ {inv.quote.currency} {formatLocal(i.unitMinor, inv.quote.minorDigits)}</div>)}</dd></>}
+                <dt>{inv.quote.items ? "Total" : "Price"}</dt><dd><b>{inv.quote.currency} {formatLocal(inv.quote.localMinor, inv.quote.minorDigits)}</b></dd>
+                <dt>You pay</dt><dd><b>{formatTokenAmount(inv.amount, 7)} {TOKEN_CODE}</b></dd>
+                <dt>Paid from</dt><dd>Family #{fam} wallet</dd>
+              </dl>
+              <p className="muted">Rate {inv.quote.rate} {inv.quote.currency} per demo USD ({inv.quote.source === "ILLUSTRATIVE" ? "illustrative, not live" : inv.quote.source}) · expires in ~{expMin} min · terminal #{inv.terminalId}</p>
+              {err && <div className="status bad">{err}</div>}
+              <button className="btn xl" disabled={!fam} onClick={approve}>Approve Payment</button>
+              <button className="btn ghost" onClick={() => { setErr(""); setInv(null); }}>Cancel</button>
+            </>
+          )}
+          {step === 2 && (
+            <>
+              <h2>Payment Authorized</h2>
+              <p><b>Show this QR code to the merchant to complete your purchase.</b></p>
+              <QR value={authQR} label="Signed payment approval for the shop" />
+              {thisApproval?.settled
+                ? <div className="status ok">✓ Settled on Stellar. The shop has been paid.</div>
+                : <div className="status pending">Waiting for merchant settlement.</div>}
+              <p className="muted">This approval is not a payment yet. It works only for this shop, this amount and this invoice, once; the shop submits it to Stellar.</p>
+              <button className="btn ghost" onClick={endPay}>← Back to wallet</button>
+            </>
+          )}
+        </div>
+      </>
+    );
+  }
+
+  // ---------------- Connected wallet dashboard ----------------
+  if (connected && synced) {
+    return (
+      <>
+        <h1>Family Wallet <Online /></h1>
+        <div className="card">
+          <p className="muted">Family #{fam} · this phone is authorized</p>
+          <p className="label">Available balance</p>
+          <div className="big">{formatTokenAmount(BigInt(synced.balance))} <span className="muted">{TOKEN_CODE}</span></div>
+          <p className="muted">{syncLine} Shared family balance; Stellar decides what can be spent.{" "}
+            <button className="linkbtn" onClick={refresh}>{check === "checking" ? "Checking…" : "Refresh balance"}</button></p>
+          <button className="btn xl" onClick={startPay}>Scan to Pay</button>
+          <p className="muted">Works without internet at participating shops: {MERCHANTS.map((m) => m.name).join(", ")}.</p>
+        </div>
+
+        <div className="card">
+          <h2>Recent payments</h2>
+          {!hist.length ? <p className="muted">No payments approved on this phone yet.</p> : (
+            <ul className="list">{hist.map((h) => (
+              <li key={h.invoiceId + h.at}>{h.local} → {formatTokenAmount(BigInt(h.amount))} {TOKEN_CODE} at {h.merchant}<br />
+                {h.settled ? <span className="settled">✓ Settled on Stellar</span>
+                  : <span className="waiting">Approved on this phone · waiting for the shop to settle{h.familyId ? "" : " (older entry)"}</span>}</li>
+            ))}</ul>
+          )}
+        </div>
+
+        <details className="card">
+          <summary>Device settings</summary>
+          <p>Security code: <span className="fp">{fp}</span></p>
+          <h3>Pairing code</h3>
+          <p className="muted">Show this to a sender to authorize this device again or for another family. It contains only the public key.</p>
+          {pairingQR}
+          <label>Family number (from the sender)</label>
+          <input inputMode="numeric" value={fam} onChange={(e) => changeFam(e.target.value.replace(/\D/g, ""))} />
+          <label>Your name (shown to the sender)</label>
+          <input value={name} onChange={(e) => { setName(e.target.value); set(NAME, e.target.value); }} />
+          <p className="warn">Testnet demo: the signing key is stored unencrypted in this browser and has no backup. Replacing or deleting it means the sender must pair this phone again.</p>
+          <button className="btn danger small" onClick={setup}>Replace key</button>
+          <button className="btn danger small" onClick={() => { if (confirm("Delete key?")) { localStorage.removeItem(SK); setSk(""); } }}>Delete key</button>
+        </details>
+      </>
+    );
+  }
+
+  // ---------------- Onboarding: set up -> connect -> confirm ----------------
   return (
     <>
-      <h1>Family wallet <Online /></h1>
+      <h1>Welcome to your Family Wallet <Online /></h1>
+      <p className="lead">Connect to your family to start spending.</p>
       <div className="stepper" aria-label="Setup progress">
-        <span className={sk ? "on" : ""} /><span className={sk && fam ? "on" : ""} /><span className={bal?.keyActive ? "on" : ""} />
+        <span className={sk ? "on" : ""} /><span className={sk && fam ? "on" : ""} /><span className={connected ? "on" : ""} />
       </div>
-      <p className="muted">{!sk ? "Step 1 of 3: create your key" : !fam ? (INVITES_UI ? "Step 2 of 3: open the invitation link from your sender" : "Step 2 of 3: enter your family number") : !bal?.keyActive ? "Step 3 of 3: ask the sender to pair this phone" : "Ready to pay at participating shops"}</p>
-      {!sk ? (
-        <div className="card">
-          <h2>Set up this phone</h2>
-          <p className="muted">Creates a signing key on this phone. Only its public part is ever shared.</p>
-          <label>Your name (shown to the sender)</label>
-          <input value={name} onChange={(e) => { setName(e.target.value); set(NAME, e.target.value); }} placeholder="e.g. Ana" />
-          <button className="btn" onClick={setup}>Create my key</button>
-        </div>
-      ) : (
-        <>
-          <div className="card">
-            <h2>Spending allowance</h2>
-            <p className="muted">Family #{fam || "?"} · {bal?.keyActive ? "this phone is authorized" : bal?.keyActive === false ? "this phone is NOT yet authorized" : "status needs connection"}</p>
-            <div className="big">{bal?.balance ? formatTokenAmount(BigInt(bal.balance)) : "—"} <span className="muted">{TOKEN_CODE}</span></div>
-            <p className="muted">Shared family balance on Stellar (last seen online). The chain decides what can be spent.</p>
-            <label>{INVITES_UI ? "Family number (set automatically by an invitation; manual fallback)" : "Family number (from the sender)"}</label>
-            <input inputMode="numeric" value={fam} onChange={(e) => { const v = e.target.value.replace(/\D/g, ""); setFam(v); set(FAM, v); }} />
-            <button className="btn ghost small" onClick={refresh}>Refresh balance</button>
-          </div>
 
-          <div className="card">
-            <h2>Pay at a shop</h2>
-            <p className="muted">Participating shops:</p>
-            <div className="shops">{MERCHANTS.map((m) => <span key={m.id}>{m.name}</span>)}</div>
-            <p className="hint">No internet needed. Your phone signs the exact amount for that one shop; the shop&apos;s connection settles it on Stellar.</p>
-            <Scanner prompt="Scan shop invoice" onResult={onInvoice} />
-            {err && <div className="status bad">{err}</div>}
-            {inv && !authQR && (
+      <div className="card">
+        <h2>1 · Set up this device</h2>
+        {!sk ? (
+          <>
+            <p className="muted">Creates a signing key on this phone. Only its public part is ever shared.</p>
+            <label>Your name (shown to the sender)</label>
+            <input value={name} onChange={(e) => { setName(e.target.value); set(NAME, e.target.value); }} placeholder="e.g. Ana" />
+            <button className="btn" onClick={setup}>Create my key</button>
+          </>
+        ) : <p className="done-step">✓ This device has its signing key.</p>}
+      </div>
+
+      <div className={"card" + (sk ? "" : " dim")}>
+        <h2>2 · Connect to your family</h2>
+        {!sk ? <p className="muted">Available after step 1.</p> : (
+          <>
+            <label>Family number (from the sender)</label>
+            <input inputMode="numeric" value={fam} onChange={(e) => changeFam(e.target.value.replace(/\D/g, ""))} />
+            {INVITES_UI && <p className="muted">Or open the invitation link from your sender.</p>}
+            <p>Show this pairing code to your sender. They open <b>Sender → Pair Family Member</b> and scan it.</p>
+            <p>Security code: <span className="fp">{fp}</span></p>
+            {pairingQR}
+          </>
+        )}
+      </div>
+
+      <div className={"card" + (sk && fam ? "" : " dim")}>
+        <h2>3 · Confirm connection</h2>
+        {!sk || !fam ? <p className="muted">Available after step 2.</p> : (
+          <>
+            {check === "checking" && !synced && <div className="status pending">Checking Stellar…</div>}
+            {synced && !synced.keyActive && check !== "offline" && (
+              <div className="status pending">Waiting for your sender to authorize this device on Stellar for Family #{fam} (not authorized yet, or the authorization was revoked). This page checks automatically.</div>
+            )}
+            {check === "FamilyNotFound" && <div className="status bad">Family #{fam} does not exist on this vault. Check the number with your sender.</div>}
+            {check && !["ok", "checking", "offline", "FamilyNotFound"].includes(check) && <div className="status bad">Could not check Stellar ({check}). Try again.</div>}
+            {check === "offline" && (
               <>
-                <dl className="kv">
-                  <dt>Shop</dt><dd>{inv.merchantName}{known ? "" : " (unlisted)"}<br /><code>{inv.merchant.slice(0, 8)}…{inv.merchant.slice(-6)}</code></dd>
-                  {inv.quote.items && <><dt>Items</dt><dd data-testid="items">{inv.quote.items.map((i, k) => <div key={k}>{i.name} × {i.qty} @ {inv.quote.currency} {formatLocal(i.unitMinor, inv.quote.minorDigits)}</div>)}</dd></>}
-                  <dt>{inv.quote.items ? "Total" : "Local price"}</dt><dd><b>{inv.quote.currency} {formatLocal(inv.quote.localMinor, inv.quote.minorDigits)}</b></dd>
-                  <dt>Actual charge</dt><dd><b>{formatTokenAmount(inv.amount, 7)} {TOKEN_CODE}</b></dd>
-                  <dt>Rate</dt><dd>{inv.quote.rate} {inv.quote.currency}/demo USD · {inv.quote.source === "ILLUSTRATIVE" ? "illustrative, not live" : inv.quote.source}</dd>
-                  <dt>Expires</dt><dd>in ~{expMin} min</dd>
-                  <dt>Terminal</dt><dd>#{inv.terminalId}</dd>
-                </dl>
-                {!fam && <p className="warn">Enter your family number first.</p>}
-                <button className="btn" disabled={!fam} onClick={approve}>Approve {formatTokenAmount(inv.amount)} {TOKEN_CODE}</button>
-                <button className="btn ghost" onClick={() => setInv(null)}>Decline</button>
+                <div className="status pending">You are offline, so this device cannot confirm its authorization yet. Connect once after your sender pairs it.</div>
+                <p className="muted">Already authorized by your sender? You can still pay; the payment only goes through if Stellar confirms this device is authorized.</p>
+                <button className="btn ghost small" onClick={startPay}>Scan to Pay anyway</button>
               </>
             )}
-            {authQR && (
-              <>
-                <div className="status info">Authorized. Awaiting merchant settlement. This is not a payment yet.</div>
-                <QR value={authQR} label="Signed approval for the shop" />
-                <p className="muted">Show this to the shop. It works only for this shop, this amount and this invoice, once.</p>
-                <button className="btn ghost small" onClick={() => { setInv(null); setAuthQR(""); }}>Done</button>
-              </>
-            )}
-          </div>
+            <button className="btn ghost small" onClick={refresh}>Check again</button>
+          </>
+        )}
+      </div>
 
-          <div className="card">
-            <h2>Pair with sender</h2>
-            <p className="muted">Show this to the sender. It contains only your public key.</p>
-            <p className="fp">{fingerprint(publicKeyOf(fromHex(sk)))}</p>
-            <QR value={encodePairingQR(name || "phone", publicKeyOf(fromHex(sk)))} label="Pairing code" />
-          </div>
-
-          <div className="card">
-            <h2>My approvals on this phone</h2>
-            {!hist.length ? <p className="muted">None yet.</p> : (
-              <ul className="list">{hist.map((h) => (
-                <li key={h.invoiceId + h.at}>{h.local} → {formatTokenAmount(BigInt(h.amount))} {TOKEN_CODE} at {h.merchant}<br />
-                  {h.settled ? <span className="settled">✓ Settled on Stellar</span>
-                    : <span className="waiting">Approved on this phone · waiting for the shop to settle{h.familyId ? "" : " (older entry)"}</span>}</li>
-              ))}</ul>
-            )}
-            <details><summary>Reset this phone</summary>
-              <p className="warn">Deletes the key from this browser. Testnet demo only: there is no recovery.</p>
-              <button className="btn danger small" onClick={() => { if (confirm("Delete key?")) { localStorage.removeItem(SK); setSk(""); } }}>Delete key</button>
-            </details>
-          </div>
-        </>
+      {hist.length > 0 && (
+        <details className="card">
+          <summary>Payments approved on this phone ({hist.length})</summary>
+          <ul className="list">{hist.map((h) => (
+            <li key={h.invoiceId + h.at}>{h.local} → {formatTokenAmount(BigInt(h.amount))} {TOKEN_CODE} at {h.merchant}<br />
+              {h.settled ? <span className="settled">✓ Settled on Stellar</span> : <span className="waiting">Approved on this phone · waiting for the shop to settle</span>}</li>
+          ))}</ul>
+        </details>
+      )}
+      {sk && (
+        <details className="card">
+          <summary>Device settings</summary>
+          <p className="warn">Testnet demo: the signing key is stored unencrypted in this browser and has no backup.</p>
+          <button className="btn danger small" onClick={setup}>Replace key</button>
+          <button className="btn danger small" onClick={() => { if (confirm("Delete key?")) { localStorage.removeItem(SK); setSk(""); } }}>Delete key</button>
+        </details>
       )}
     </>
   );

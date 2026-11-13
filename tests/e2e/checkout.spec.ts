@@ -1,8 +1,9 @@
 // REAL browser + REAL Stellar Testnet. Spends demo OTUSD. Needs OT_DEMO_CODE and a running app.
 import { expect, test, type BrowserContext, type Page } from "@playwright/test";
+import { paste, simulateAuthorizedDevice } from "./helpers";
 
 const CODE = process.env.OT_DEMO_CODE ?? "";
-const SHOTS = "submission/screenshots";
+const SHOTS = "test-results/checkout-shots";   // never overwrite the committed submission screenshots
 // Screenshots are taken only of real states; the access-code form is never visible in them.
 async function shot(page: Page, name: string) {
   await expect(page.locator("#democode")).toHaveCount(0);
@@ -13,11 +14,6 @@ async function unlock(page: Page) {
   await page.locator("#democode").fill(CODE);
   await page.getByRole("button", { name: "Unlock demo" }).click();
   await expect(page.getByText("Demo operator access active")).toBeVisible();
-}
-async function paste(page: Page, text: string) {
-  await page.getByText("Paste code instead").click();
-  await page.getByPlaceholder("OTI1:… / OTA1:… / OTK1:…").fill(text);
-  await page.getByRole("button", { name: "Use pasted code" }).click();
 }
 const merchantBalance = async (ctx: BrowserContext) => BigInt((await (await ctx.request.get("/api/merchant/A")).json()).balance);
 const familyBalance = async (ctx: BrowserContext, f: string) => BigInt((await (await ctx.request.get(`/api/family/${f}`)).json()).family.balance);
@@ -37,8 +33,8 @@ test("full journey: fund, pair, offline approve, settle on Stellar, replay rejec
   // 2. Sender creates + funds a family (real transactions)
   await op.goto("/sender");
   await unlock(op);
-  await op.locator('label:has-text("Amount") + input').fill("3");
-  await op.getByText("Advanced: create a new family").click();
+  await op.getByText("Advanced: family management").click();
+  await op.locator("#create-amount").fill("3");
   await op.getByRole("button", { name: "Create new family + fund" }).click();
   const created = op.getByText(/Family #\d+ created and funded/);
   await expect(created).toBeVisible({ timeout: 90_000 });
@@ -56,15 +52,21 @@ test("full journey: fund, pair, offline approve, settle on Stellar, replay rejec
   expect(pairing).not.toContain(sk!);                       // pairing code carries no private key
 
   // 4-5. Pair and register the public key on chain
+  await op.getByRole("button", { name: "Pair Family Member" }).click();
+  await expect(op.getByTestId("pair-panel")).toContainText(`Family #${familyId}`);
   await paste(op, pairing);
   await expect(op.locator(".fp")).toHaveText(fingerprint);
   await op.getByRole("button", { name: `Authorize for family #${familyId}` }).click();
   await expect(op.getByText("Phone paired")).toBeVisible({ timeout: 90_000 });
+  await expect(op.getByTestId("pair-panel")).toHaveCount(0);                // returned to the family overview
 
-  // 6. Deposit more OTUSD
+  // 6. Add Funds -> deposit -> back on the dashboard with the updated balance
+  await op.getByRole("button", { name: "Add Funds" }).click();
   await op.locator('label:has-text("Amount") + input').fill("2");
-  await op.getByRole("button", { name: `Top up Family #${familyId}` }).click();
+  await op.getByRole("button", { name: `Add 2 OTUSD to Family #${familyId}` }).click();
   await expect(op.getByText("Deposited 2 OTUSD")).toBeVisible({ timeout: 90_000 });
+  await expect(op.getByTestId("fund-panel")).toHaveCount(0);
+  await expect(op.locator(".big")).toContainText("5.00");
   expect(await familyBalance(operator, familyId)).toBe(50_000_000n);
   await shot(op, "02-sender-dashboard");
 
@@ -84,7 +86,7 @@ test("full journey: fund, pair, offline approve, settle on Stellar, replay rejec
   await shop.getByRole("tab", { name: "Custom amount" }).click();
   await shop.locator('label:has-text("Price") + input').fill("20.00");
   await expect(shop.getByText("1.0857764 OTUSD", { exact: true })).toBeVisible();   // 20 MXN / 18.42, rounded up at 7 dp (recent-payments list may contain the same amount as a substring)
-  await shop.getByRole("button", { name: "Show invoice QR" }).click();
+  await shop.getByRole("button", { name: "Generate Invoice QR" }).click();
   await expect(shop.locator(".qr img")).toBeVisible();
   const invoice = await shop.getByTestId("qr-text").first().inputValue();
   await shot(shop, "04-shop-invoice");
@@ -94,13 +96,15 @@ test("full journey: fund, pair, offline approve, settle on Stellar, replay rejec
   await phone.setOffline(true);
   const offlineRequests: string[] = [];
   ph.on("request", (r) => offlineRequests.push(r.url()));
-  await expect(ph.getByText("Offline")).toBeVisible();
+  await expect(ph.getByText("Offline", { exact: true })).toBeVisible();          // the pill (the wallet also says "you are offline")
+  await ph.getByRole("button", { name: "Scan to Pay" }).click();
   await paste(ph, invoice);
   await expect(ph.getByText("MXN 20.00")).toBeVisible();
   await expect(ph.getByText("1.0857764 OTUSD")).toBeVisible();
   await expect(ph.getByText(/illustrative, not live/)).toBeVisible();
   await ph.getByRole("button", { name: /^Approve / }).click();
-  await expect(ph.getByText("Authorized. Awaiting merchant settlement.")).toBeVisible();
+  await expect(ph.getByRole("heading", { name: "Payment Authorized" })).toBeVisible();
+  await expect(ph.getByText("Waiting for merchant settlement.")).toBeVisible();
   await expect(ph.locator(".qr img").first()).toBeVisible();     // QR generated locally
   const auth = await ph.getByTestId("qr-text").first().inputValue();
   expect(auth.startsWith("OTA1:")).toBe(true);
@@ -109,12 +113,13 @@ test("full journey: fund, pair, offline approve, settle on Stellar, replay rejec
 
   // Offline reload: the signing screen and key survive without network.
   await ph.reload();
-  await expect(ph.getByRole("heading", { name: /Family wallet/ })).toBeVisible();
+  await expect(ph.getByRole("heading", { name: /Family Wallet/ })).toBeVisible();
   await expect(ph.locator(".fp")).toHaveText(fingerprint);
 
   // 11-13. Merchant imports approval, submits (double-click), waits for confirmation
   const mBefore = await merchantBalance(operator);
   await paste(shop, auth);
+  await expect(shop.getByText(/Authorization Verified/)).toBeVisible();
   await expect(shop.getByText(/NOT PAID until Stellar confirms/)).toBeVisible();
   await shop.getByRole("button", { name: "Submit to Stellar" }).dblclick();
   await expect(shop.getByText(/Payment confirmed on Stellar/)).toBeVisible({ timeout: 90_000 });
@@ -136,6 +141,7 @@ test("full journey: fund, pair, offline approve, settle on Stellar, replay rejec
   const hash = href!.split("/").pop()!;
   await expect.poll(async () => JSON.stringify((await (await operator.request.get("/api/merchant/A")).json()).payments), { timeout: 30_000 }).toContain(hash);
   await op.goto("/sender");
+  await op.getByText("Advanced: family management").click();
   await op.locator('label:has-text("Or enter family #") + input').fill(familyId);
   await expect(op.locator(`a.txlink[href$="${hash}"]`)).toBeVisible({ timeout: 30_000 });
 
@@ -146,15 +152,18 @@ test("full journey: fund, pair, offline approve, settle on Stellar, replay rejec
   await operator.close(); await phone.close();
 });
 
-test("malformed and foreign codes are rejected without crashing", async ({ page }) => {
+test("malformed and foreign codes are rejected without crashing", async ({ page, context }) => {
+  await simulateAuthorizedDevice(context);
   await page.goto("/family");
   await page.getByRole("button", { name: "Create my key" }).click();
+  await page.locator('label:has-text("Family number") + input').fill("1");
+  await page.getByRole("button", { name: "Scan to Pay" }).click();
   await paste(page, "OTI1:{not json");
   await expect(page.locator(".status.bad")).toContainText(/malformed/i);
   await page.getByPlaceholder("OTI1:… / OTA1:… / OTK1:…").fill("hello world");
   await page.getByRole("button", { name: "Use pasted code" }).click();
   await expect(page.locator(".status.bad")).toContainText(/not an OpenTab invoice/);
-  await expect(page.getByRole("heading", { name: /Family wallet/ })).toBeVisible();
+  await expect(page.getByRole("heading", { name: /Family Wallet/ })).toBeVisible();
 });
 
 test("interactive screens require demo access", async ({ page }) => {
@@ -163,7 +172,7 @@ test("interactive screens require demo access", async ({ page }) => {
   await page.locator("#democode").fill("definitely-wrong");
   await page.getByRole("button", { name: "Unlock demo" }).click();
   await expect(page.getByText("Incorrect demo access code.")).toBeVisible();
-  await page.getByText("Advanced: create a new family").click();
+  await page.getByText("Advanced: family management").click();
   await page.getByRole("button", { name: "Create new family + fund" }).click();
   await expect(page.getByText(/Demo access code required/)).toBeVisible();
 });

@@ -28,10 +28,11 @@ export function QR({ value, label }: { value: string; label: string }) {
   );
 }
 
-/** Camera QR scanner (jsQR) with a paste fallback. */
-export function Scanner({ onResult, prompt }: { onResult: (text: string) => void; prompt: string }) {
+/** Camera QR scanner (jsQR) with a paste fallback. `autoStart` opens the camera as soon as the scanner is shown
+ *  (used right after the user taps "Scan to Pay"); if the camera is unavailable the paste fallback remains. */
+export function Scanner({ onResult, prompt, autoStart = false }: { onResult: (text: string) => void; prompt: string; autoStart?: boolean }) {
   const video = useRef<HTMLVideoElement>(null);
-  const [on, setOn] = useState(false);
+  const [on, setOn] = useState(autoStart);
   const [err, setErr] = useState("");
   const [text, setText] = useState("");
   useEffect(() => {
