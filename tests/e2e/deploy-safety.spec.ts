@@ -28,7 +28,8 @@ test("invitations are hidden and the invitation API fails closed when not enable
   expect((await probe.json()).error).toBe("InvitesUnavailable");
 
   await page.goto("/sender");
-  await expect(page.getByRole("heading", { name: "2 · Pair a family member's phone" })).toBeVisible();
+  await page.getByRole("button", { name: "Pair Family Member" }).click();
+  await expect(page.getByTestId("pair-panel")).toContainText("Scan the pairing code");
   await expect(page.getByTestId("invites")).toHaveCount(0);
   await expect(page.getByText("Invite a family member")).toHaveCount(0);
   await expect(page.getByText("Kept during migration")).toHaveCount(0);
@@ -54,7 +55,7 @@ test("REGRESSION: shop rejects outdated or mismatched approvals, accepts exact o
   // Itemized Milk x1 invoice.
   await page.getByRole("radio", { name: /Milk/ }).click();
   await page.locator("#qty").fill("1");
-  await page.getByRole("button", { name: "Show invoice QR" }).click();
+  await page.getByRole("button", { name: "Generate Invoice QR" }).click();
   const invoiceQR = await page.getByTestId("qr-text").first().inputValue();
   const inv = P.parseInvoiceQR(invoiceQR);
   expect(inv.quote.items).toEqual([{ name: "Milk", qty: 1, unitMinor: 300n }]);
@@ -79,15 +80,16 @@ test("REGRESSION: shop rejects outdated or mismatched approvals, accepts exact o
   // (c) Exact itemized approval (current app) is accepted locally. NOT submitted.
   await paste(page, P.encodeAuthQR(P.signInvoice(inv, FAMILY, sk, now())));
   await expect(page.getByText(/NOT PAID until Stellar confirms/)).toBeVisible();
-  await page.getByRole("button", { name: "New sale" }).click();
+  await page.getByRole("button", { name: "Cancel sale" }).click();
 
   // (d) Backward compatibility: a non-itemized (custom amount) invoice + matching approval is accepted locally. NOT submitted.
   await page.getByRole("tab", { name: "Custom amount" }).click();
-  await page.getByRole("button", { name: "Show invoice QR" }).click();
+  await page.getByRole("button", { name: "Generate Invoice QR" }).click();
   const plainQR = await page.getByTestId("qr-text").first().inputValue();
   const plain = P.parseInvoiceQR(plainQR);
   expect(plain.quote.items).toBeUndefined();
   await paste(page, staleApproval(plainQR, sk));            // an outdated app is fine for non-itemized invoices
   await expect(page.getByText(/NOT PAID until Stellar confirms/)).toBeVisible();
-  await page.getByRole("button", { name: "New sale" }).click();
+  await page.getByRole("button", { name: "Cancel sale" }).click();
+  await expect(page.getByRole("button", { name: "Generate Invoice QR" })).toBeVisible();   // back to product selection
 });

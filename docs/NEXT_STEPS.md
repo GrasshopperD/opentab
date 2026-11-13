@@ -8,7 +8,8 @@ Items marked **[USER]** need the user to do or approve something.
 
 ## Before 08:30 EST Nov 13 (priority order)
 
-- [x] Sender preset (Family #7) + product catalog + deployment-safety fixes (sessions 6-7, branch `ui-demo-catalog`, uncommitted).
+- [x] Sender preset (Family #7) + product catalog + deployment-safety fixes (sessions 6-7, branch `ui-demo-catalog`, PR #1).
+- [x] Demo UI layout/flow cleanup (session 8, branch `demo-ui-polish`, based on `ui-demo-catalog`). **[USER]** review the Vercel preview; merge order would be PR #1 then this branch.
 - [ ] **[USER]** Approve committing `ui-demo-catalog`, then merge/push and Vercel deploy (each needs explicit approval). Leave `INVITES_ENABLED` unset on Vercel.
 - [ ] Before the demo: open the deployed site online on the demo phone once (updates the cached app so it signs item lists); re-pair the phone to Family #7 via manual pairing.
 - [ ] Invitations for production: database-backed store, real funder accounts, contact verification (see BUILD_LOG session 6).

@@ -8,9 +8,9 @@ export default function Home() {
       <p className="lead">Send funds to a shared family spending balance. Loved ones can pay participating local merchants, even when their phone is offline.</p>
       {!isConfigured() && <div className="status bad">This deployment is not configured with a FamilyVault contract. Nothing below will show live data.</div>}
       <div className="grid3">
-        <Link href="/sender" className="card role"><h2>Sender</h2><p className="muted">Create a family vault, fund it, and pair a family member&apos;s phone.</p></Link>
+        <Link href="/sender" className="card role"><h2>Sender</h2><p className="muted">See your family&apos;s balance, add funds, and pair a family member&apos;s phone.</p></Link>
         <Link href="/family" className="card role"><h2>Family</h2><p className="muted">Scan a shop&apos;s invoice and approve it on your phone, no mobile data needed.</p></Link>
-        <Link href="/shop" className="card role"><h2>Shop</h2><p className="muted">Price in local currency, scan the approval, get settled on Stellar.</p></Link>
+        <Link href="/shop" className="card role"><h2>Shop</h2><p className="muted">Select a product, show the invoice, scan the approval, get settled on Stellar.</p></Link>
       </div>
       <div className="card">
         <h2>How a purchase works</h2>

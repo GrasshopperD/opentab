@@ -19,6 +19,7 @@ test("invite link -> accept with key proof -> sender approves -> Connected on St
   await op.locator("#democode").fill(CODE);
   await op.getByRole("button", { name: "Unlock demo" }).click();
   await expect(op.getByTestId("demo-family-note")).toContainText(`Family #${FAMILY}`);
+  await op.getByRole("button", { name: "Pair Family Member" }).click();
   const panel = op.getByTestId("invites");
   await panel.locator("#inv-name").fill("Ana");
   await panel.getByRole("button", { name: "Invite family member" }).click();

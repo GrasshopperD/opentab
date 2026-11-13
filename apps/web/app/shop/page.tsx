@@ -194,25 +194,28 @@ export default function Shop() {
     setReceipts([]); try { localStorage.removeItem(RECEIPTS); } catch { }
   }
 
+  // Progressive disclosure: which stage of the existing payment state machine dominates the screen.
+  const stage = !c ? -1 : c.status === "PRESENTED" ? 0 : c.status === "AUTHORIZED_LOCALLY" ? 2
+    : c.status === "CONFIRMED" ? 3 : c.status === "FAILED" || c.status === "EXPIRED" ? -2 : 2.5;   // 2.5 = submitting / waiting
+  const STAGES = ["Customer scans invoice", "Scan approval", "Submit to Stellar", "Receipt"];
+  const stageClass = (i: number) => stage === 0 ? (i <= 1 ? "on" : "") : stage >= 2 && i < Math.floor(stage) ? "done" : i === Math.floor(stage) ? "on" : "";
+  const summary = inv && (
+    <p className="muted" data-testid="sale-summary">
+      {inv.quote.items ? inv.quote.items.map((i) => `${i.name} × ${i.qty}`).join(", ") : "Custom amount"} · <b>{inv.quote.currency} {formatLocal(inv.quote.localMinor, inv.quote.minorDigits)}</b>
+      {" "}= {formatTokenAmount(inv.amount, 7)} {TOKEN_CODE} · {merchantNameOf(inv.merchant)} · terminal #{inv.terminalId}
+    </p>
+  );
+  const busySale = !!c && c.status !== "CONFIRMED" && c.status !== "FAILED" && c.status !== "EXPIRED";
+
   return (
     <>
-      <h1>Shop checkout</h1>
-      <p className="lead">Price in local currency. The customer approves on their phone; you get paid on Stellar.</p>
+      <h1>Merchant Checkout</h1>
+      <p className="lead">Select a product and accept payment.</p>
       <DemoAccess />
-      <div className="card">
-        <div className="row">
-          <div><label>Shop</label>
-            <select value={mid} onChange={(e) => setMid(e.target.value as "A" | "B")} disabled={!!c}>
-              {MERCHANTS.map((m) => <option key={m.id} value={m.id}>{m.name}</option>)}
-            </select></div>
-          <div><label>Terminal</label><input inputMode="numeric" value={terminal} onChange={(e) => setTerminal(e.target.value.replace(/\D/g, ""))} disabled={!!c} /></div>
-        </div>
-        <p className="muted">Settlement balance: <b>{info?.balance !== undefined ? formatTokenAmount(BigInt(info.balance), 7) : "…"} {TOKEN_CODE}</b> (on chain). Bank payout: not available (no licensed provider yet).</p>
-      </div>
 
       {!c && (
         <div className="card">
-          <h2>New sale</h2>
+          <div className="wallet-head"><h2>Select a product</h2><span className="muted">{merchant.name} · terminal #{terminal || "1"}</span></div>
           <div className="seg" role="tablist" aria-label="Sale type">
             <button role="tab" aria-selected={mode === "catalog"} className={mode === "catalog" ? "on" : ""} onClick={() => setMode("catalog")}>Products</button>
             <button role="tab" aria-selected={mode === "custom"} className={mode === "custom" ? "on" : ""} onClick={() => setMode("custom")}>Custom amount</button>
@@ -241,6 +244,7 @@ export default function Shop() {
               <div><label>Price</label><input inputMode="decimal" value={price} onChange={(e) => setPrice(e.target.value)} /></div>
             </div>
           )}
+          <h3>Order summary</h3>
           {quote ? (
             <dl className="kv">
               {mode === "catalog" && <><dt>Item</dt><dd data-testid="line">{product.name} × {qtyN} @ {CATALOG_CURRENCY} {formatLocal(product.unitMinor, 2)}</dd></>}
@@ -249,31 +253,54 @@ export default function Shop() {
               <dt>Rate</dt><dd>{quote.rate} {quote.currency} per demo USD · illustrative, not a live quote</dd>
             </dl>
           ) : <p className="warn">{mode === "catalog" ? "Enter a quantity from 1 to 99." : "Enter a valid price."}</p>}
-          <button className="btn" disabled={!quote || charge <= 0n} onClick={createInvoice}>Show invoice QR</button>
+          <button className="btn xl" disabled={!quote || charge <= 0n} onClick={createInvoice}>Generate Invoice QR</button>
+          <details>
+            <summary>Shop &amp; terminal settings</summary>
+            <div className="row">
+              <div><label>Shop</label>
+                <select value={mid} onChange={(e) => setMid(e.target.value as "A" | "B")}>
+                  {MERCHANTS.map((m) => <option key={m.id} value={m.id}>{m.name}</option>)}
+                </select></div>
+              <div><label>Terminal</label><input inputMode="numeric" value={terminal} onChange={(e) => setTerminal(e.target.value.replace(/\D/g, ""))} /></div>
+            </div>
+          </details>
         </div>
       )}
 
       {c && inv && (
         <div className="card">
-          <h2>Invoice {toHex(inv.invoiceId).slice(0, 8)} · {inv.quote.currency} {formatLocal(inv.quote.localMinor, inv.quote.minorDigits)} = {formatTokenAmount(inv.amount, 7)} {TOKEN_CODE}</h2>
-          {inv.quote.items && <p className="muted">{inv.quote.items.map((i) => `${i.name} × ${i.qty}`).join(", ")} · covered by the customer&apos;s signature</p>}
+          {stage >= 0 && (
+            <ol className="progress" aria-label="Checkout steps">
+              {STAGES.map((s, i) => <li key={s} className={stageClass(i)}>{i + 1}. {s}</li>)}
+            </ol>
+          )}
           {c.status === "PRESENTED" && (
             <>
-              <p className="muted">1. Customer scans this (their phone can be offline).</p>
+              <h2>Step 1 · Customer scans invoice</h2>
+              {summary}
+              {inv.quote.items && <p className="muted">Items, quantities and prices are covered by the customer&apos;s signature.</p>}
               <QR value={c.invoiceQR} label="Invoice QR" />
-              <p className="muted">2. Scan the customer&apos;s approval.</p>
+              <p className="muted">The customer&apos;s phone can be offline.</p>
+              <h2>Step 2 · Scan customer approval</h2>
               <Scanner prompt="Scan customer approval" onResult={onAuth} />
             </>
           )}
           {c.status === "AUTHORIZED_LOCALLY" && (
             <>
-              <div className="status info">Approval received and signature checked. NOT PAID until Stellar confirms.</div>
-              <button className="btn" onClick={() => submit(false)}>Submit to Stellar</button>
+              <p className="done-step">✓ Invoice shown · ✓ customer approval scanned</p>
+              {summary}
+              <div className="status info">Authorization Verified: the customer&apos;s signature matches this exact invoice. NOT PAID until Stellar confirms.</div>
+              <h2>Step 3 · Submit to Stellar</h2>
+              <button className="btn xl" onClick={() => submit(false)}>Submit to Stellar</button>
             </>
           )}
-          {c.status === "SUBMITTED" && <div className="status pending">Submitting to Stellar… do not hand over goods yet.</div>}
+          {c.status === "SUBMITTED" && <><h2>Step 3 · Submitting to Stellar</h2>{summary}<div className="status pending">Submitting to Stellar… do not hand over goods yet.</div></>}
           {(c.status === "PENDING" || c.status === "UNKNOWN") && (
-            <div className="status pending">Status {c.status}: waiting for final confirmation. Do not resubmit; checking by transaction hash…<br /><TxLink hash={c.hash} /></div>
+            <>
+              <h2>Step 3 · Waiting for Stellar</h2>{summary}
+              <div className="status pending">Status {c.status}: waiting for final confirmation. Do not resubmit; checking by transaction hash…<br /><TxLink hash={c.hash} /></div>
+              <button className="btn ghost small" onClick={reconcile}>Check status now</button>
+            </>
           )}
           {c.status === "CONFIRMED" && (
             <>
@@ -284,39 +311,48 @@ export default function Shop() {
                 <div>for {inv.quote.currency} {formatLocal(inv.quote.localMinor, inv.quote.minorDigits)} at {merchantNameOf(inv.merchant)} · terminal {inv.terminalId}</div>
                 <TxLink hash={c.hash} />
               </div>
+              <h2>Step 4 · Receipt</h2>
               <ReceiptView r={receipt ?? receiptFor(inv, c.hash)} />
               <p className="muted">You may hand over the goods.</p>
+              <button className="btn xl" onClick={() => { save(null); setNote(""); }}>New Sale</button>
               <button className="btn danger small" onClick={() => submit(true)}>Replay test: try to charge again</button>
             </>
           )}
-          {c.status === "FAILED" && <div className="status bad">Payment failed: {c.error}<br /><TxLink hash={c.hash} /></div>}
-          {c.status === "EXPIRED" && <div className="status bad">{c.error}</div>}
-          {(c.status === "PENDING" || c.status === "UNKNOWN") && <button className="btn ghost small" onClick={reconcile}>Check status now</button>}
+          {c.status === "FAILED" && <><h2>Payment failed</h2>{summary}<div className="status bad">Payment failed: {c.error}<br /><TxLink hash={c.hash} /></div></>}
+          {c.status === "EXPIRED" && <><h2>Invoice expired</h2>{summary}<div className="status bad">{c.error}</div></>}
           {note && <div className="status bad">{note}</div>}
-          <button className="btn ghost small" onClick={() => { save(null); setNote(""); }}>New sale</button>
+          {c.status !== "CONFIRMED" && (
+            <button className={"btn " + (stage === -2 ? "xl" : "ghost small")} onClick={() => { save(null); setNote(""); }}>{stage === -2 ? "New Sale" : "Cancel sale"}</button>
+          )}
         </div>
       )}
 
-      <div className="card">
-        <h2>Receipt log (this browser)</h2>
-        <p className="muted">Demo record kept only in this browser&apos;s local storage. It is not durable merchant accounting and not a tax invoice; the payments themselves are on Stellar Testnet.</p>
-        {!receipts.length ? <p className="muted">No confirmed sales recorded on this browser yet.</p> : (
-          <ul className="list" data-testid="receipt-log">{receipts.slice(0, 10).map((r) => (
-            <li key={r.invoiceId}>{r.lines.map((l) => `${l.product} × ${l.qty}`).join(", ")} · {r.currency} {r.total} · {new Date(r.confirmedAt).toLocaleString()}<br /><TxLink hash={r.txHash} /></li>
-          ))}</ul>
-        )}
-        <button className="btn ghost small" disabled={!receipts.length} onClick={exportCsv}>Export CSV</button>
-        <button className="btn ghost small" disabled={!receipts.length} onClick={clearReceipts}>Clear log</button>
-      </div>
+      {!busySale && (
+        <>
+          <div className="card">
+            <h2>Receipt history (this browser)</h2>
+            <p className="muted">Demo record kept only in this browser&apos;s local storage. It is not durable merchant accounting and not a tax invoice; the payments themselves are on Stellar Testnet. New Sale keeps this history.</p>
+            {!receipts.length ? <p className="muted">No confirmed sales recorded on this browser yet.</p> : (
+              <ul className="list" data-testid="receipt-log">{receipts.slice(0, 10).map((r) => (
+                <li key={r.invoiceId}>{r.lines.map((l) => `${l.product} × ${l.qty}`).join(", ")} · {r.currency} {r.total} · {new Date(r.confirmedAt).toLocaleString()}<br /><TxLink hash={r.txHash} /></li>
+              ))}</ul>
+            )}
+            <button className="btn ghost small" disabled={!receipts.length} onClick={exportCsv}>Export CSV</button>
+            <button className="btn ghost small" disabled={!receipts.length} onClick={clearReceipts}>Clear log</button>
+          </div>
 
-      <div className="card">
-        <h2>Recent settlements</h2>
-        {!info?.payments?.length ? <p className="muted">None in the recent event window.</p> : (
-          <ul className="list">{info.payments.map((p: any) => (
-            <li key={p.txHash + p.invoiceId}>{formatTokenAmount(BigInt(p.amount), 7)} {TOKEN_CODE} · family #{String(p.familyId)} · terminal {p.terminalId}<br /><TxLink hash={p.txHash} /></li>
-          ))}</ul>
-        )}
-      </div>
+          <details className="card">
+            <summary>Shop account on Stellar</summary>
+            <p className="muted">Settlement balance: <b>{info?.balance !== undefined ? formatTokenAmount(BigInt(info.balance), 7) : "…"} {TOKEN_CODE}</b> (on chain). Bank payout: not available (no licensed provider yet).</p>
+            <h3>Recent settlements</h3>
+            {!info?.payments?.length ? <p className="muted">None in the recent event window.</p> : (
+              <ul className="list">{info.payments.map((p: any) => (
+                <li key={p.txHash + p.invoiceId}>{formatTokenAmount(BigInt(p.amount), 7)} {TOKEN_CODE} · family #{String(p.familyId)} · terminal {p.terminalId}<br /><TxLink hash={p.txHash} /></li>
+              ))}</ul>
+            )}
+          </details>
+        </>
+      )}
     </>
   );
 }
