@@ -1,0 +1,11 @@
+/* Product Mode showcase extras on Alex's dashboard tokens (read-only screens). */
+.dash-app.ot-theme-recipient { --ot-accent:#b7d3f4; }
+.dash-balance-note { color:#b2bba3; font-size:14px; line-height:1.6; margin-top:10px; }
+.dash-demo-note { color:var(--ot-muted); font-size:14px; line-height:1.6; margin-top:14px; }
+.dash-activity-actions { margin-top:22px; }
+.dash-app a.ot-button { text-decoration:none; }
+.dash-app a.dash-secondary { display:inline-flex; align-items:center; text-decoration:none; }
+.pm-stack { display:grid; gap:22px; max-width:760px; }
+.pm-cta { width:100%; justify-content:space-between; min-height:64px !important; font-size:18px !important; }
+.pm-muted { color:var(--ot-muted); font-size:14px; line-height:1.6; margin-top:10px; }
+.pm-row-actions { display:flex; flex-wrap:wrap; gap:14px; align-items:center; margin-top:18px; }

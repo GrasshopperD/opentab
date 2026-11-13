@@ -1,0 +1,10 @@
+/* Demo Mode | Product Mode switch: one slim bar above every page, same on phone and desktop. */
+.mode-switch { display: flex; align-items: center; justify-content: center; gap: 14px; flex-wrap: wrap; padding: 8px 16px; background: #0b0c0d; border-bottom: 1px solid #2a2d27; font-family: Arial, Helvetica, sans-serif; position: relative; z-index: 30; }
+.mode-switch-track { display: inline-flex; padding: 3px; border-radius: 999px; background: #1d201b; border: 1px solid #3a3f33; }
+.mode-switch-track a { display: inline-flex; align-items: center; min-height: 34px; padding: 6px 16px; border-radius: 999px; font-size: 14px; font-weight: 600; color: #c9cec0 !important; text-decoration: none !important; white-space: nowrap; }
+.mode-switch-track a:hover { color: #fff !important; }
+.mode-switch-track a.is-on { background: #f4e65d; color: #171810 !important; }
+.mode-switch.is-demo .mode-switch-track a.is-on { background: #5eead4; color: #062f2a !important; }
+.mode-switch-track a:focus-visible { outline: 2px solid #f4e65d; outline-offset: 2px; }
+.mode-switch-hint { color: #a4a99a; font-size: 12px; }
+@media (max-width: 560px) { .mode-switch { padding: 7px 10px; gap: 6px; } .mode-switch-hint { flex-basis: 100%; text-align: center; font-size: 11px; } .mode-switch-track a { padding: 6px 13px; font-size: 13px; } }
