@@ -1,0 +1,85 @@
+/* Product Mode screens (/wallet, /business/checkout) and organizer extras, built on Alex's dashboard tokens.
+   Also restyles the SHARED payment components (QR, Scanner, status lines) for the dark Product surface; their
+   markup and behavior are the same components Demo Mode uses. */
+.dash-app.ot-theme-recipient { --ot-accent:#b7d3f4; }
+.dash-app.ot-theme-merchant { --ot-accent:#eaba95; }
+.dash-app .dash-sidebar nav.pm-nav-3 { grid-template-columns:none; }
+.dash-balance-note { color:#b2bba3; font-size:14px; line-height:1.6; margin-top:10px; }
+.dash-fingerprint-inline { font-family:ui-monospace,monospace; letter-spacing:.04em; }
+.dash-devices { margin-top:30px; border-top:1px solid var(--ot-line); padding-top:22px; }
+.dash-devices h3 { font-size:16px; font-weight:400; color:#e0e5d6; }
+.dash-devices strong { font-size:15px !important; }
+.dash-check { display:flex !important; align-items:flex-start; gap:12px; margin:20px 0 4px !important; font-size:15px !important; color:#e1e5d8; line-height:1.5; cursor:pointer; }
+.dash-check input { width:20px !important; height:20px; padding:0 !important; margin:2px 0 0 !important; accent-color:var(--ot-accent); flex-shrink:0; }
+
+/* Shared components on the dark surface */
+.dash-app .qr { display:grid; justify-items:center; gap:12px; margin:22px 0; }
+.dash-app .qr img { width:min(300px,78vw); background:#fff; border-radius:10px; border:0; padding:6px; }
+.dash-app .qr .btn, .dash-app .pm-ghost { background:transparent; color:#d8e0cb; border:1px solid #48533a; border-radius:6px; padding:11px 16px; font-size:14px; min-height:44px; font-weight:500; }
+.dash-app .qr details, .dash-app .scanner details { color:#b3bda3; font-size:14px; width:100%; }
+.dash-app .qr details summary, .dash-app .scanner details summary { color:#b3bda3; }
+.dash-app .qr textarea { display:block; width:100%; margin:12px 0; background:#20271a; color:#e4e9da; border:1px solid #4c553f; border-radius:6px; padding:12px; font-size:13px; resize:vertical; }
+.dash-app .scanner { margin-top:18px; }
+.dash-app .scanner .btn.ghost.small { background:transparent; color:#d8e0cb; border:1px solid #48533a; font-size:14px; padding:10px 14px; margin:0; }
+.dash-app .pill { display:inline-block; font-size:12px; font-weight:600; padding:4px 10px; border-radius:99px; vertical-align:middle; margin-left:10px; letter-spacing:0; }
+.dash-app .pill.ok { background:#24331f; color:#b9d99b; } .dash-app .pill.off { background:#3a2620; color:#f1c3ad; }
+.pm-status { border-radius:7px; padding:16px 18px; line-height:1.6; margin:18px 0; font-size:15px; border:1px solid; }
+.pm-status.ok { background:#20301d; border-color:#4f6a3d; color:#d4ebc0; }
+.pm-status.pending { background:#2d2b19; border-color:#6f6a35; color:#ece7b5; }
+.pm-status.bad { background:#30231e; border-color:#6d4635; color:#f4d4c4; }
+.pm-status.info { background:#1d2733; border-color:#3f5a78; color:#cfe1f5; }
+.pm-status a { text-decoration:underline; text-underline-offset:3px; }
+.pm-muted { color:var(--ot-muted); font-size:14px; line-height:1.6; }
+.pm-muted + .pm-muted { margin-top:8px; }
+.pm-fp { font-family:ui-monospace,monospace; overflow-wrap:anywhere; color:#dbe5cd; padding:14px; border:1px dashed #52613f; border-radius:6px; font-size:18px; letter-spacing:.06em; margin:12px 0; }
+.pm-stack { display:grid; gap:22px; max-width:760px; }
+.pm-cta { width:100%; justify-content:space-between; min-height:64px !important; font-size:18px !important; margin-top:22px; }
+.pm-row-actions { display:flex; flex-wrap:wrap; gap:14px; align-items:center; margin-top:18px; }
+.pm-steps { list-style:none; display:grid; grid-template-columns:repeat(var(--n,3),minmax(0,1fr)); gap:6px; margin:0 0 22px; padding:0; }
+.pm-steps li { border-top:3px solid #3b4430; padding-top:10px; font-size:13px; color:var(--ot-muted); line-height:1.35; }
+.pm-steps li.is-done { border-color:#6f8a54; color:#cfdcbf; }
+.pm-steps li.is-on { border-color:var(--ot-accent); color:var(--ot-text); }
+.pm-kv { margin:18px 0 0; }
+.pm-kv > div { display:flex; justify-content:space-between; gap:20px; padding:14px 0; border-bottom:1px solid var(--ot-line); font-size:15px; }
+.pm-kv dt { color:var(--ot-muted); flex-shrink:0; }
+.pm-kv dd { margin:0; text-align:right; overflow-wrap:anywhere; min-width:0; }
+.pm-kv dd small { display:block; color:var(--ot-muted); font-size:12px; margin-top:4px; }
+.pm-total { font-size:44px; letter-spacing:-1.5px; line-height:1.2; margin:16px 0 2px; }
+.pm-total span { font-size:15px; color:var(--ot-muted); margin-left:10px; letter-spacing:0; }
+.pm-field label { display:block; font-size:15px; margin:20px 0 10px; color:#e1e5d8; }
+.pm-products { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:12px; margin-top:20px; }
+.pm-product { border:1px solid var(--ot-line); border-radius:8px; padding:16px; background:#1a2018; display:grid; gap:12px; }
+.pm-product.is-in { border-color:var(--ot-accent); background:#221f19; }
+.pm-product b { font-size:18px; font-weight:400; }
+.pm-product > div:first-child { display:flex; justify-content:space-between; gap:10px; align-items:baseline; }
+.pm-product > div:first-child span { color:var(--ot-muted); font-size:15px; }
+.pm-qty { display:grid; grid-template-columns:44px minmax(0,1fr) 44px; align-items:center; gap:6px; }
+.pm-qty button { height:44px; border-radius:6px; background:#252c20 !important; color:#e4e9da; border:1px solid #48533a !important; font-size:20px !important; line-height:1; }
+.pm-qty input { text-align:center; padding:10px 4px !important; font-size:17px !important; height:44px; }
+.pm-lines { list-style:none; margin:14px 0 0; padding:0; }
+.pm-lines li { display:flex; justify-content:space-between; gap:12px; padding:10px 0; border-bottom:1px solid var(--ot-line); font-size:15px; }
+.pm-lines li span:last-child { white-space:nowrap; }
+.pm-success { display:grid; gap:6px; justify-items:center; text-align:center; padding:26px 16px; border-radius:9px; background:#20301d; border:1px solid #4f6a3d; color:#d4ebc0; margin-bottom:22px; }
+.pm-success .pm-tick { width:54px; height:54px; border-radius:50%; display:grid; place-items:center; background:#b9d99b; color:#1a2614; font-size:28px; }
+.pm-success b { font-size:20px; font-weight:500; }
+.pm-success .pm-total { margin:4px 0 0; }
+.pm-receipt table { width:100%; border-collapse:collapse; margin-top:14px; font-size:14px; }
+.pm-receipt th, .pm-receipt td { text-align:left; padding:10px 6px; border-bottom:1px solid var(--ot-line); }
+.pm-receipt th { color:var(--ot-muted); font-weight:400; }
+.pm-receipt td:last-child, .pm-receipt th:last-child { text-align:right; }
+.pm-receipt code, .pm-code { font-family:ui-monospace,monospace; font-size:12px; overflow-wrap:anywhere; word-break:break-all; }
+.pm-list { list-style:none; margin:12px 0 0; padding:0; }
+.pm-list li { padding:14px 0; border-bottom:1px solid var(--ot-line); display:grid; gap:4px; font-size:15px; }
+.pm-list li span { color:var(--ot-muted); font-size:13px; }
+.pm-list li .pm-settled { color:#b9d99b; } .pm-list li .pm-waiting { color:#e6dd9a; }
+.pm-warn { color:#f1c3ad; font-size:14px; line-height:1.6; margin-top:14px; }
+.pm-danger { background:transparent !important; color:#f4b9a0 !important; border:1px solid #6d4635 !important; border-radius:6px; padding:11px 16px; font-size:14px !important; min-height:44px; }
+.pm-inline-form { display:flex; gap:12px; align-items:stretch; flex-wrap:wrap; }
+.pm-inline-form input { flex:1; min-width:140px; }
+@media(max-width:760px) {
+  .dash-app .dash-sidebar nav.pm-nav-3 { grid-template-columns:repeat(3,1fr); }
+  .pm-total { font-size:38px; }
+  .pm-products { grid-template-columns:minmax(0,1fr); }
+  .pm-kv > div { font-size:14px; }
+  .pm-steps li { font-size:12px; }
+}

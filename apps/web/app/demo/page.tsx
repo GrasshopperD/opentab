@@ -38,9 +38,9 @@ export default function Demo() {
       </section>
 
       <section className="grid3" aria-label="Try each role">
-        <Link href="/sender" className="card role"><h2>1 · Sender</h2><p className="muted">See Family #7&apos;s balance, add funds, pair a family member. Needs the demo access code.</p></Link>
-        <Link href="/family" className="card role"><h2>2 · Family phone</h2><p className="muted">Set up the device, then Scan to Pay: review and approve offline, show the signed QR. Public.</p></Link>
-        <Link href="/shop" className="card role"><h2>3 · Shop</h2><p className="muted">Select a product, show the invoice, scan the approval, settle on Stellar. Needs the access code.</p></Link>
+        <Link href="/demo/sender" className="card role"><h2>1 · Sender</h2><p className="muted">See Family #7&apos;s balance, add funds, pair a family member. Needs the demo access code.</p></Link>
+        <Link href="/demo/family" className="card role"><h2>2 · Family phone</h2><p className="muted">Set up the device, then Scan to Pay: review and approve offline, show the signed QR. Public.</p></Link>
+        <Link href="/demo/shop" className="card role"><h2>3 · Shop</h2><p className="muted">Select a product, show the invoice, scan the approval, settle on Stellar. Needs the access code.</p></Link>
       </section>
 
       <section className="card" aria-labelledby="crypto-h">

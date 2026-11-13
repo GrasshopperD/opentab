@@ -115,3 +115,51 @@ test("expired or tampered invoices cannot be approved", async ({ page, context }
   await expect(page.locator(".status.bad")).toContainText(/different vault/);
   await expect(page.getByRole("button", { name: /^Approve / })).toHaveCount(0);
 });
+
+// Product Mode /wallet uses the same hook (useFamilyWallet) as /family; prove it signs offline too, on Chromium and WebKit.
+test("Product wallet signs an itemized invoice offline and never claims payment", async ({ page, context, browserName }) => {
+  await simulateAuthorizedDevice(context);   // connected wallet without an on-chain registration (see helpers.ts)
+  await page.goto("/wallet");
+  await page.locator("#wallet-name").fill("Ana");
+  await page.getByRole("button", { name: /Create my key/ }).click();
+  const pub = P.toHex(P.parsePairingQR(await page.getByTestId("qr-text").first().inputValue()).pub);
+  await page.locator("#wallet-family").fill("7");
+  await expect(page.getByRole("button", { name: /^Scan to Pay/ })).toBeVisible();
+  await page.reload();                                           // let the service worker take control (Chromium)
+  await expect(page.getByRole("button", { name: /^Scan to Pay/ })).toBeVisible();
+  const swControlled = browserName === "webkit" ? false : await page.waitForFunction(() => navigator.serviceWorker?.controller != null, null, { timeout: 30_000 })
+    .then(() => true).catch(() => false);
+  test.info().annotations.push({ type: "service-worker", description: `${browserName}: controlled=${swControlled}` });
+
+  await context.setOffline(true);
+  const requests: string[] = [];
+  page.on("request", (r) => requests.push(r.url()));
+  await expect(page.getByText("Offline", { exact: true })).toBeVisible();
+  await expect(page.getByText(/you are offline, so this is not a fresh check/)).toBeVisible();
+  await page.getByRole("button", { name: /^Scan to Pay/ }).click();
+  const q = { currency: "USD", localMinor: 700n, minorDigits: 2, rate: "1.0000", source: "ILLUSTRATIVE",
+    items: [{ name: "Milk", qty: 1, unitMinor: 300n }, { name: "Bread", qty: 2, unitMinor: 200n }] };
+  const inv = { network: P.TESTNET_PASSPHRASE, vault: VAULT, token: TOKEN, merchant: MERCHANT_A, merchantName: "Tienda Rosa",
+    terminalId: 1, invoiceId: P.randomBytes(32), amount: P.computeCharge(q), quote: q, expiresAt: BigInt(Math.floor(Date.now() / 1000) + 600) };
+  await paste(page, P.encodeInvoiceQR(inv));
+  await expect(page.getByTestId("items")).toContainText("Bread × 2 @ USD 2.00");
+  await expect(page.getByTestId("pay-review")).toContainText("USD 7.00");
+  await page.getByRole("button", { name: /Approve payment/ }).click();
+  await expect(page.getByRole("heading", { name: "Payment authorized" })).toBeVisible();
+  await expect(page.getByText("Waiting for merchant settlement. Not paid yet.")).toBeVisible();
+  await expect(page.getByText(/Payment confirmed|Settled on Stellar/)).toHaveCount(0);
+  const auth = P.parseAuthQR(await page.getByTestId("qr-text").first().inputValue());
+  expect(P.verifyAuthorization(auth)).toBe(true);
+  expect(P.toHex(auth.signer)).toBe(pub);
+  expect(P.authorizationMismatch(inv, auth)).toBeNull();
+  const prefetch = (u: string) => /[?&]_rsc=/.test(u) || new URL(u).pathname.startsWith("/_next/static/");
+  expect(requests.filter((u) => !prefetch(u)), "no network requests while importing and signing offline").toEqual([]);
+  await page.getByRole("button", { name: /Back to wallet/ }).click();
+  await expect(page.getByText("waiting for the shop to settle")).toBeVisible();
+  if (browserName !== "webkit" && swControlled) {
+    await page.reload();                                         // installed-app case: the wallet opens offline
+    await expect(page.getByRole("button", { name: /^Scan to Pay/ })).toBeVisible();
+    await expect(page.getByText("waiting for the shop to settle")).toBeVisible();
+  } else test.info().annotations.push({ type: "limitation", description: `${browserName}: offline reload not tested in this emulation; verify on a physical phone` });
+  await context.setOffline(false);
+});

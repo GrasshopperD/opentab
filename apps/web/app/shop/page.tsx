@@ -1,40 +1,13 @@
 "use client";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import {
-  authorizationMismatch, computeCharge, encodeInvoiceQR, formatLocal, formatTokenAmount, parseAuthQR, parseInvoiceQR, parseLocalAmount,
-  randomBytes, toHex, verifyAuthorization, type Invoice, type PaymentStatus, type Quote,
-} from "@opentab/shared";
-import { api, DemoAccess, ERROR_TEXT, QR, Scanner, TxLink } from "../components";
-import { CATALOG, CATALOG_CURRENCY, DEMO_RATES, MERCHANTS, NETWORK_PASSPHRASE, RATE_SOURCE, TOKEN_CODE, TOKEN_ID, VAULT_ID } from "@/lib/config";
+import { useMemo, useState } from "react";
+import { computeCharge, formatLocal, formatTokenAmount, type Quote } from "@opentab/shared";
+import { DemoAccess, QR, Scanner, TxLink } from "../components";
+import { CATALOG, CATALOG_CURRENCY, DEMO_RATES, MERCHANTS, TOKEN_CODE } from "@/lib/config";
+import { catalogQuote, customQuote, merchantNameOf, receiptFor, type Receipt } from "@/lib/checkout";
+import { useCheckout } from "./use-checkout";
 
-const CUR = "opentab.shop.current";
-const RECEIPTS = "opentab.shop.receipts"; // local demo record on THIS browser only (no backend accounting)
-const merchantNameOf = (a: string) => MERCHANTS.find((m) => m.address === a)?.name ?? "this shop"; // survives refresh so a pending payment can be reconciled
-
-interface Current { merchantId: string; invoiceQR: string; authQR?: string; status: PaymentStatus; hash?: string; error?: string }
-
-/** Built only from the SIGNED invoice (items are covered by the customer's signature) plus the confirmed tx. */
-interface Receipt {
-  invoiceId: string; merchantName: string; merchant: string; terminalId: number;
-  lines: { product: string; qty: number; unit: string; total: string }[];
-  currency: string; total: string; charge: string; txHash?: string; status: "CONFIRMED"; confirmedAt: string;
-}
-function loadReceipts(): Receipt[] { try { const r = JSON.parse(localStorage.getItem(RECEIPTS) || "[]"); return Array.isArray(r) ? r : []; } catch { return []; } }
-function receiptFor(inv: Invoice, hash: string | undefined): Receipt {
-  const d = inv.quote.minorDigits;
-  const lines = inv.quote.items?.length
-    ? inv.quote.items.map((i) => ({ product: i.name, qty: i.qty, unit: formatLocal(i.unitMinor, d), total: formatLocal(i.unitMinor * BigInt(i.qty), d) }))
-    : [{ product: "Custom amount", qty: 1, unit: formatLocal(inv.quote.localMinor, d), total: formatLocal(inv.quote.localMinor, d) }];
-  return { invoiceId: toHex(inv.invoiceId), merchantName: merchantNameOf(inv.merchant), merchant: inv.merchant, terminalId: inv.terminalId,
-    lines, currency: inv.quote.currency, total: formatLocal(inv.quote.localMinor, d), charge: formatTokenAmount(inv.amount, 7),
-    txHash: hash, status: "CONFIRMED", confirmedAt: new Date().toISOString() };
-}
-function csv(rows: Receipt[]): string {
-  const q = (v: unknown) => `"${String(v ?? "").replace(/"/g, '""')}"`;
-  const head = ["confirmed_at", "merchant", "terminal", "invoice_id", "product", "quantity", "unit_price", "line_total", "currency", "invoice_total", `charged_${TOKEN_CODE}`, "stellar_tx_hash", "status"];
-  const body = rows.flatMap((r) => r.lines.map((l) => [r.confirmedAt, r.merchantName, r.terminalId, r.invoiceId, l.product, l.qty, l.unit, l.total, r.currency, r.total, r.charge, r.txHash ?? "", r.status].map(q).join(",")));
-  return [head.join(","), ...body].join("\r\n");
-}
+// Demo Mode merchant checkout. The sale state machine (invoice, approval verification, Stellar submission, reconciliation,
+// receipts) lives in useCheckout, shared with Product Mode /business/checkout; this file is presentation only.
 
 function ReceiptView({ r }: { r: Receipt }) {
   return (
@@ -58,145 +31,27 @@ function ReceiptView({ r }: { r: Receipt }) {
 }
 
 export default function Shop() {
-  const [mid, setMid] = useState<"A" | "B">("A");
-  const [terminal, setTerminal] = useState("1");
+  const {
+    mid, setMid, terminal, setTerminal, merchant, c, inv, info, note, receipts, receipt, stage, busySale,
+    createInvoice, onAuth, submit, reconcile, exportCsv, clearReceipts, newSale,
+  } = useCheckout();
   const [cur, setCur] = useState("MXN");
   const [price, setPrice] = useState("100.00");
-  const [c, setC] = useState<Current | null>(null);
-  const [info, setInfo] = useState<any>(null);
-  const [note, setNote] = useState("");
   const [mode, setMode] = useState<"catalog" | "custom">("catalog");
   const [sku, setSku] = useState(CATALOG[0].sku);
   const [qty, setQty] = useState("1");
-  const [receipts, setReceipts] = useState<Receipt[]>([]);
-  useEffect(() => { setReceipts(loadReceipts()); }, []);
-  const merchant = MERCHANTS.find((m) => m.id === mid)!;
-
-  const save = (x: Current | null) => { setC(x); try { x ? localStorage.setItem(CUR, JSON.stringify(x)) : localStorage.removeItem(CUR); } catch { } };
-  useEffect(() => { try { const s = localStorage.getItem(CUR); if (s) { const x = JSON.parse(s); setC(x); setMid(x.merchantId); } } catch { } }, []);
-
-  const loadInfo = useCallback(async () => setInfo(await api(`/api/merchant/${mid}`)), [mid]);
-  useEffect(() => { loadInfo(); }, [loadInfo]);
 
   const product = CATALOG.find((p) => p.sku === sku) ?? CATALOG[0];
   const qtyN = /^\d{1,2}$/.test(qty) && Number(qty) >= 1 ? Number(qty) : 0;
   const quote: Quote | null = useMemo(() => {
     try {
-      if (mode === "catalog") {
-        if (!qtyN) return null;
-        const r = DEMO_RATES[CATALOG_CURRENCY];
-        // Item, quantity and unit price go into the quote hash, so the customer's signature covers them.
-        return { currency: CATALOG_CURRENCY, localMinor: product.unitMinor * BigInt(qtyN), minorDigits: r.digits, rate: r.rate, source: RATE_SOURCE,
-          items: [{ name: product.name, qty: qtyN, unitMinor: product.unitMinor }] };
-      }
-      const r = DEMO_RATES[cur];
-      return { currency: cur, localMinor: parseLocalAmount(price, r.digits), minorDigits: r.digits, rate: r.rate, source: RATE_SOURCE };
+      // Item, quantity and unit price go into the quote hash, so the customer's signature covers them.
+      if (mode === "catalog") return qtyN ? catalogQuote([{ sku: product.sku, qty: qtyN }]) : null;
+      return customQuote(cur, price);
     } catch { return null; }
   }, [mode, product, qtyN, cur, price]);
   const charge = quote && quote.localMinor > 0n ? computeCharge(quote) : 0n;
 
-  function createInvoice() {
-    if (!quote || charge <= 0n) return;
-    const inv: Invoice = {
-      network: NETWORK_PASSPHRASE, vault: VAULT_ID, token: TOKEN_ID, merchant: merchant.address, merchantName: merchant.name,
-      terminalId: Number(terminal) || 1, invoiceId: randomBytes(32), amount: charge, quote,
-      expiresAt: BigInt(Math.floor(Date.now() / 1000) + 15 * 60),
-    };
-    setNote(""); save({ merchantId: mid, invoiceQR: encodeInvoiceQR(inv), status: "PRESENTED" });
-  }
-
-  const onAuth = useCallback((t: string) => {
-    if (!c) return;
-    try {
-      const a = parseAuthQR(t);
-      const inv = parseInvoiceQR(c.invoiceQR);
-      if (toHex(a.invoice.invoiceId) !== toHex(inv.invoiceId)) throw new Error("This approval is for a different invoice.");
-      if (!verifyAuthorization(a)) throw new Error("Signature check failed. Do not hand over goods.");
-      // The signature must cover EXACTLY the invoice shown here: items, quantities, prices, merchant, terminal, expiry.
-      const why = authorizationMismatch(inv, a);
-      if (why === "OUTDATED_APP") throw new Error("The customer's OpenTab app is out of date: it approved the total without the item list. "
-        + "Ask them to open OpenTab once while online to update it, then approve this invoice again. Do not hand over goods yet.");
-      if (why) throw new Error("This approval does not match the invoice on screen (items, price, terminal or expiry differ). Do not hand over goods.");
-      setNote(""); save({ ...c, authQR: t, status: "AUTHORIZED_LOCALLY" });
-    } catch (e: any) { setNote(e.message); }
-  }, [c]);
-
-  const busy = useRef(false); // synchronous lock: a double-click cannot start two submissions
-
-  async function submit(replay = false) {
-    if (!c?.authQR || busy.current) return;
-    const inv0 = parseInvoiceQR(c.invoiceQR);
-    if (!replay && Number(inv0.expiresAt) * 1000 < Date.now()) {
-      save({ ...c, status: "EXPIRED", error: "Invoice expired before submission. Start a new sale; the customer must approve again." });
-      return;
-    }
-    busy.current = true;
-    try {
-      if (!replay) save({ ...c, status: "SUBMITTED", error: undefined });
-      setNote(replay ? "Attempting to charge the same approval again…" : "");
-      const r = await api("/api/merchant/pay", { method: "POST", body: JSON.stringify({ merchantId: c.merchantId, authorization: c.authQR, forceSubmitForDemo: replay }) });
-      if (replay) {
-        setNote(r.status === "CONFIRMED" ? "UNEXPECTED: second charge succeeded." : `Replay blocked: ${ERROR_TEXT[r.error] ?? r.error}`);
-        return;
-      }
-      const transport = r.error === "NetworkError" || r.error === "BadResponse" || r.error === "ServerError";
-      const status: PaymentStatus = r.status === "CONFIRMED" ? "CONFIRMED"
-        : r.status === "PENDING" ? "PENDING"
-        : r.status === "UNKNOWN" || transport ? "UNKNOWN"
-        : r.error === "Unauthorized" || r.error === "RateLimited" ? "AUTHORIZED_LOCALLY" // not submitted at all
-        : "FAILED";
-      save({ ...c, status, hash: r.hash, error: r.error ? (ERROR_TEXT[r.error] ?? `${r.error} ${r.detail ?? ""}`) : undefined });
-      if (status === "AUTHORIZED_LOCALLY") setNote(ERROR_TEXT[r.error] ?? r.error);
-      loadInfo();
-    } finally { busy.current = false; }
-  }
-
-  /** Resolve PENDING/UNKNOWN from the chain: by tx hash, then by the invoice's on-chain replay record. */
-  async function reconcile() {
-    if (!c) return;
-    if (c.hash) {
-      const r = await api(`/api/tx/${c.hash}`);
-      if (r.status === "CONFIRMED" || r.status === "FAILED") { save({ ...c, status: r.status }); loadInfo(); return; }
-    }
-    if (!c.authQR) return;
-    let fam: bigint, id: string;
-    try { const a = parseAuthQR(c.authQR); fam = a.familyId; id = toHex(a.invoice.invoiceId); } catch { return; }
-    const s = await api(`/api/invoice?family=${fam}&id=${id}`);
-    if (s.used === true) { save({ ...c, status: "CONFIRMED", error: undefined }); loadInfo(); }
-    else if (s.used === false && !c.hash) {
-      // Never reached the chain: safe to retry the SAME approval (the contract allows each invoice once).
-      save({ ...c, status: "AUTHORIZED_LOCALLY", error: undefined });
-      setNote("Not settled on Stellar. You can safely submit the same approval again.");
-    }
-  }
-  useEffect(() => {
-    if (c && (c.status === "PENDING" || c.status === "UNKNOWN")) { const t = setTimeout(reconcile, 3000); return () => clearTimeout(t); }
-  });
-
-  const inv = c ? (() => { try { return parseInvoiceQR(c.invoiceQR); } catch { return null; } })() : null;
-  useEffect(() => { if (c && !inv) save(null); }); // corrupted saved state: start over instead of crashing
-
-  // Record a receipt only once Stellar has CONFIRMED the payment (never on local authorization).
-  const invId = inv ? toHex(inv.invoiceId) : "";
-  const receipt = receipts.find((r) => r.invoiceId === invId);
-  useEffect(() => {
-    if (!c || !inv || c.status !== "CONFIRMED" || receipt) return;
-    const next = [receiptFor(inv, c.hash), ...loadReceipts().filter((r) => r.invoiceId !== invId)].slice(0, 200);
-    setReceipts(next); try { localStorage.setItem(RECEIPTS, JSON.stringify(next)); } catch { }
-  });
-  function exportCsv() {
-    const url = URL.createObjectURL(new Blob([csv(receipts)], { type: "text/csv" }));
-    const a = document.createElement("a"); a.href = url; a.download = `opentab-demo-receipts-${new Date().toISOString().slice(0, 10)}.csv`;
-    document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(url), 1000);
-  }
-  function clearReceipts() {
-    if (!confirm("Delete the local receipt log on this browser? On-chain payments are not affected.")) return;
-    setReceipts([]); try { localStorage.removeItem(RECEIPTS); } catch { }
-  }
-
-  // Progressive disclosure: which stage of the existing payment state machine dominates the screen.
-  const stage = !c ? -1 : c.status === "PRESENTED" ? 0 : c.status === "AUTHORIZED_LOCALLY" ? 2
-    : c.status === "CONFIRMED" ? 3 : c.status === "FAILED" || c.status === "EXPIRED" ? -2 : 2.5;   // 2.5 = submitting / waiting
   const STAGES = ["Customer scans invoice", "Scan approval", "Submit to Stellar", "Receipt"];
   const stageClass = (i: number) => stage === 0 ? (i <= 1 ? "on" : "") : stage >= 2 && i < Math.floor(stage) ? "done" : i === Math.floor(stage) ? "on" : "";
   const summary = inv && (
@@ -205,7 +60,6 @@ export default function Shop() {
       {" "}= {formatTokenAmount(inv.amount, 7)} {TOKEN_CODE} · {merchantNameOf(inv.merchant)} · terminal #{inv.terminalId}
     </p>
   );
-  const busySale = !!c && c.status !== "CONFIRMED" && c.status !== "FAILED" && c.status !== "EXPIRED";
 
   return (
     <>
@@ -253,7 +107,7 @@ export default function Shop() {
               <dt>Rate</dt><dd>{quote.rate} {quote.currency} per demo USD · illustrative, not a live quote</dd>
             </dl>
           ) : <p className="warn">{mode === "catalog" ? "Enter a quantity from 1 to 99." : "Enter a valid price."}</p>}
-          <button className="btn xl" disabled={!quote || charge <= 0n} onClick={createInvoice}>Generate Invoice QR</button>
+          <button className="btn xl" disabled={!quote || charge <= 0n} onClick={() => createInvoice(quote)}>Generate Invoice QR</button>
           <details>
             <summary>Shop &amp; terminal settings</summary>
             <div className="row">
@@ -314,7 +168,7 @@ export default function Shop() {
               <h2>Step 4 · Receipt</h2>
               <ReceiptView r={receipt ?? receiptFor(inv, c.hash)} />
               <p className="muted">You may hand over the goods.</p>
-              <button className="btn xl" onClick={() => { save(null); setNote(""); }}>New Sale</button>
+              <button className="btn xl" onClick={newSale}>New Sale</button>
               <button className="btn danger small" onClick={() => submit(true)}>Replay test: try to charge again</button>
             </>
           )}
@@ -322,7 +176,7 @@ export default function Shop() {
           {c.status === "EXPIRED" && <><h2>Invoice expired</h2>{summary}<div className="status bad">{c.error}</div></>}
           {note && <div className="status bad">{note}</div>}
           {c.status !== "CONFIRMED" && (
-            <button className={"btn " + (stage === -2 ? "xl" : "ghost small")} onClick={() => { save(null); setNote(""); }}>{stage === -2 ? "New Sale" : "Cancel sale"}</button>
+            <button className={"btn " + (stage === -2 ? "xl" : "ghost small")} onClick={newSale}>{stage === -2 ? "New Sale" : "Cancel sale"}</button>
           )}
         </div>
       )}

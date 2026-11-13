@@ -1,12 +1,12 @@
 "use client";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { fingerprint, formatTokenAmount, parsePairingQR, toHex } from "@opentab/shared";
-import { api, DemoAccess, ERROR_TEXT, Scanner, TxLink } from "../components";
+import { DemoAccess, ERROR_TEXT, Scanner, TxLink } from "../components";
+import { createFamily, depositFunds, readFamily, setDeviceKey } from "../opentab-api";
+import { rememberFamily, savedFamilies } from "./sender-store";
 import { Invites } from "./invites";
 import { DEMO_FAMILY_ID, INVITES_UI, MERCHANTS, TOKEN_CODE } from "@/lib/config";
 
-const LS = "opentab.sender.families";
-const load = (): string[] => { try { return JSON.parse(localStorage.getItem(LS) || "[]"); } catch { return []; } };
 type View = "home" | "fund" | "pair";
 
 export default function Sender() {
@@ -25,14 +25,14 @@ export default function Sender() {
   const lock = useRef(false); // synchronous guard: a double-click cannot send two transactions
   const once = (f: () => Promise<void>) => async () => { if (lock.current) return; lock.current = true; try { await f(); } finally { lock.current = false; } };
 
-  useEffect(() => { setFamilies(load()); }, []);
+  useEffect(() => { setFamilies(savedFamilies()); }, []);
   const [loading, setLoading] = useState(false);
   const seq = useRef(0); // ignore out-of-order responses when the family number changes quickly
   const refresh = useCallback(async () => {
     const n = ++seq.current;
     if (!fam) { setInfo(null); setLoading(false); return; }
     setLoading(true);
-    const r = await api(`/api/family/${fam}${pair ? "?key=" + pair.pub : ""}`);
+    const r = await readFamily(fam, pair?.pub);
     if (n !== seq.current) return;
     setInfo(r); setLoading(false); if (!r.error) setCheckedAt(Date.now());
   }, [fam, pair]);
@@ -50,16 +50,16 @@ export default function Sender() {
 
   async function create() {
     setBusy("create"); setMsg(null);
-    const r = await api("/api/sender/family", { method: "POST", body: JSON.stringify({ amount: createAmount }) });
+    const r: any = await createFamily(createAmount);
     setBusy("");
     if (r.familyId) {
-      const f = [...load(), String(r.familyId)]; localStorage.setItem(LS, JSON.stringify(f)); setFamilies(f); setFam(String(r.familyId));
+      setFamilies(rememberFamily(String(r.familyId))); setFam(String(r.familyId));
       show({ ...r, hash: r.depositTx, status: r.depositStatus }, `Family #${r.familyId} created and funded with ${createAmount} ${TOKEN_CODE}.`);
     } else show(r, "");
   }
   async function deposit() {
     setBusy("deposit"); setMsg(null);
-    const r = await api("/api/sender/deposit", { method: "POST", body: JSON.stringify({ familyId: fam, amount }) });
+    const r = await depositFunds(fam, amount);
     setBusy("");
     if (show(r, `Deposited ${amount} ${TOKEN_CODE} to Family #${fam}. Confirmed on Stellar.`)) setView("home"); // back to the dashboard only after confirmation
     refresh();
@@ -67,7 +67,7 @@ export default function Sender() {
   async function keyAction(action: "register" | "revoke") {
     if (!pair) return;
     setBusy(action); setMsg(null);
-    const r = await api("/api/sender/key", { method: "POST", body: JSON.stringify({ familyId: fam, publicKey: pair.pub, action }) });
+    const r = await setDeviceKey(fam, pair.pub, action);
     setBusy("");
     const done = show(r, action === "register"
       ? `Phone paired: “${pair.label || "unnamed"}” is now authorized on Stellar for Family #${fam}.`
