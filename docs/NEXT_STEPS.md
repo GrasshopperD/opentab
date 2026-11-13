@@ -14,7 +14,8 @@ Items marked **[USER]** need the user to do or approve something.
 - [x] Two-mode release (session 9, PR #3, main `213e496`): Demo Mode | Product Mode switch, Product Mode as a read-only showcase of live Family #7 data. Production verified (BUILD_LOG).
 - [x] Root `/` opens Demo Mode with a judge introduction (session 10, branch `release/demo-default`).
 - [x] Full-history secret audit PASS and judge-facing README (session 11, branch `docs/public-readme`; see BUILD_LOG).
-- [x] Public demo without an access code: Sender and Shop open for demo Family #7; revoke, create family and other families stay operator-only (session 12, branch `fix/public-demo-no-code`; see BUILD_LOG).
+- [x] Public demo without an access code: Sender and Shop open for demo Family #7; revoke, create family and other families stay operator-only (session 12, PR #7, main `5a4d3e9`, production verified; see BUILD_LOG).
+- [ ] Optional: top up the demo sender's OTUSD from `opentab-issuer` if the open demo pool (718 OTUSD on 2026-11-13) runs low. **[USER]** chose not to top up before deploy.
 - [ ] Product Mode copy still says the demo access code is required (`dashboard.tsx` lines 35 and 48, `onboarding.tsx` line 14, `business/page.tsx` line 42); left unchanged because Product Mode was out of scope.
 - [ ] **[USER]** Add the public demo-video link to the README "Demo video" section once it is recorded.
 - [ ] Optional: `submission/RELEASE_LINKS.md` still shows the GitHub and Vercel rows as "TBD" (written before deployment); left unchanged because it is a submission file.
