@@ -23,9 +23,9 @@ Items marked **[USER]** need the user to do or approve something.
 
 - [x] Browser click-through of Sender -> Family -> Shop (Playwright, real Testnet, 5/5) and UI fixes (session 4).
 - [x] Demo access control + CSRF/rate/input limits on all signing endpoints (session 4, 18/18 checks).
-- [x] GitHub remote `GrasshopperD/opentab` added and pushed. **[USER]** Make public when ready to submit (if not already).
+- [x] GitHub remote `GrasshopperD/opentab` added and pushed. Made **public** 2026-11-13 after the full-history audit (session 11).
 - [x] Vercel project `opentabglobal` (team `open-tab1`, root `apps/web`) with server-only env vars.
-- [ ] Re-run `scripts/security-api.mts` and Playwright against the Vercel URL.
+- [x] Re-run `scripts/security-api.mts` and Playwright against the Vercel URL (sessions 9-11: all passed; non-spending suite 48 passed, 2 skipped).
 - [ ] **[USER]** Manual phone test (procedure in `docs/SESSION_HANDOFF.md`): camera, airplane mode, PWA install.
 - [ ] **[USER]** Record 1-minute video (`submission/DEMO_SCRIPT.md`), submit one-page overview (`submission/OpenTab_Global_One_Page_Overview.pdf`) + Devpost.
 - [ ] Add QR codes for the live URL / GitHub / explorer to the trifold once URLs exist; print `submission/OpenTab_Global_Trifold_48x36in.pdf`.
