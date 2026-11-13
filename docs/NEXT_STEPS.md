@@ -3,6 +3,14 @@
 The current to-do list between Claude Code sessions. Update at the end of every session.
 Items marked **[USER]** need the user to do or approve something.
 
+**Current owner scope (2026-11-12):** frontend redesign while preserving ALL backend/payment logic. First home/onboarding pass implemented on `feat/frontend-onboarding`; see [ONBOARDING_FRONTEND.md](ONBOARDING_FRONTEND.md) for routes, preview-only auth/setup and verification. Review `/home` and `/onboarding` next. Existing demo is accessible at `/demo/*`; original compatibility routes remain. Background context: [UI_REDESIGN_GUIDE.md](UI_REDESIGN_GUIDE.md), [SYSTEM_MAP.md](SYSTEM_MAP.md), [FILE_INVENTORY.md](FILE_INVENTORY.md). The competition/deployment queue below is context, not authorization to deploy, transact, integrate Mode B or rewrite architecture during this workstream.
+
+Latest design direction: centered Axiom-style home entry with one Get started CTA, interactive scroll story/role previews below; minimal one-column login/setup with larger text and controls. Review this simpler version; no authentication/backend integration has been added.
+
+Latest owner correction: original yellow/charcoal colors and earlier rectangular buttons restored. `/business` is a separate top-navigation page. Home now includes a pixel-map scroll journey from Canada to Mexico using the official Stellar symbol. Review `/home#the-journey` and `/business`; all actions remain frontend-only or links into existing flows.
+
+Latest implementation: `/dashboard` is the first organizer dashboard, reached from organizer setup completion. It uses existing APIs for demo access, family reads, funding and phone access, with review/pending handling. Browser/app name and icons now match OpenTab branding. Backend/payment code remains unchanged. Review `/dashboard`; see [DASHBOARD_FRONTEND.md](DASHBOARD_FRONTEND.md). Recipient and merchant dashboards are not part of this first organizer pass.
+
 **Hard deadline:** Devpost + one-page overview, Fri 13 Nov 2026, 08:30 EST.
 **Current milestone:** M5-M7 (UI verification on devices, Vercel, submission). M1-M4 DONE. See `docs/SESSION_HANDOFF.md`.
 

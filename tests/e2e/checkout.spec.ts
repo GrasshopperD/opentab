@@ -27,9 +27,9 @@ test("full journey: fund, pair, offline approve, settle on Stellar, replay rejec
   const operator = await browser.newContext();              // sender + shop terminal (online)
   const phone = await browser.newContext({ viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true });
 
-  // 1. Landing page
+  // 1. Original demo landing page (the public root now hosts frontend onboarding).
   const op = await operator.newPage();
-  await op.goto("/");
+  await op.goto("/demo/home");
   await expect(op.getByRole("heading", { name: /Your support/ })).toBeVisible();
   await expect(op.getByText("STELLAR TESTNET DEMO")).toBeVisible();
   await shot(op, "01-landing");

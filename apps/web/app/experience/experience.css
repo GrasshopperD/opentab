@@ -1,0 +1,183 @@
+/* New frontend experience only. Legacy demo styles and payment components stay intact. */
+.ot-experience {
+  --ot-bg: #101113; --ot-surface: #191a1d; --ot-line: #303136; --ot-text: #f4f3ec;
+  --ot-muted: #a0a19f; --ot-accent: #f4e65d; --ot-story: #eceee4;
+  min-height: 100vh; background: var(--ot-bg); color: var(--ot-text);
+  font-family: Arial, Helvetica, sans-serif; -webkit-font-smoothing: antialiased;
+}
+.ot-experience a { color: inherit; text-decoration: none; }
+.ot-experience button, .ot-experience input, .ot-experience select { font-family: inherit; }
+.ot-experience button { cursor: pointer; }
+.ot-experience button:disabled { cursor: not-allowed; opacity: .38; }
+.ot-experience button, .ot-experience a, .ot-experience input, .ot-experience select { -webkit-tap-highlight-color: transparent; }
+.ot-experience :focus-visible { outline: 2px solid var(--ot-accent); outline-offset: 5px; }
+.ot-experience h1:focus { outline: none; }
+.ot-experience p, .ot-experience h1, .ot-experience h2, .ot-experience h3 { margin: 0; }
+.ot-experience svg { flex-shrink: 0; }
+.ot-skip { position: absolute; left: 20px; top: -100px; z-index: 50; padding: 15px; background: #f4e65d; color: #111 !important; }
+.ot-skip:focus { top: 12px; }
+.ot-header { height: 100px; padding: 0 clamp(24px, 5vw, 88px); display: flex; align-items: center; justify-content: space-between; gap: 24px; border-bottom: 1px solid var(--ot-line); }
+.ot-brand { display: inline-flex; align-items: center; gap: 11px; flex-shrink: 0; }
+.ot-brand > span { font-size: 29px; font-weight: 600; letter-spacing: -1.8px; }
+.ot-brand > svg { color: var(--ot-accent); }
+.ot-brand-dot { color: var(--ot-accent); }
+.ot-nav { display: flex; gap: 34px; color: #c7c8c3; font-size: 13px; }
+.ot-nav a:hover, .ot-text-link:hover, .ot-quiet-link:hover { color: var(--ot-accent); }
+.ot-header-actions { display: flex; align-items: center; gap: 28px; font-size: 13px; }
+.ot-header-actions > a { white-space: nowrap; }
+.ot-button { display: inline-flex; align-items: center; justify-content: space-between; gap: 32px; min-height: 54px; padding: 16px 23px; border: 1px solid transparent; border-radius: 6px; background: var(--ot-accent); color: #171810 !important; font-size: 14px; font-weight: 600; transition: background .18s, transform .18s; }
+.ot-button:hover:not(:disabled) { background: color-mix(in srgb, var(--ot-accent) 82%, white); transform: translateY(-1px); }
+.ot-button-small { min-height: 42px; padding: 11px 17px; font-size: 12px; gap: 24px; }
+.ot-button-full { width: 100%; margin-top: 24px; }
+.ot-hero { max-width: 1600px; margin: auto; padding: 88px clamp(24px, 5vw, 88px) 78px; display: grid; grid-template-columns: 1.07fr 1fr; align-items: center; gap: 35px; }
+.ot-eyebrow { display: flex; align-items: center; gap: 10px; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 10px; letter-spacing: 1.4px; font-weight: 400; }
+.ot-dot { height: 6px; width: 6px; border-radius: 50%; display: inline-block; background: var(--ot-accent); flex-shrink: 0; }
+.ot-hero-copy h1 { margin: 31px 0 25px; font-family: Georgia, 'Times New Roman', serif; font-size: clamp(58px, 5.8vw, 91px); font-weight: 400; line-height: 1.04; letter-spacing: -4.6px; }
+.ot-hero-copy h1 > span { color: var(--ot-accent); font-style: italic; }
+.ot-hero-description { font-size: 16px; line-height: 1.75; max-width: 395px; color: var(--ot-muted); }
+.ot-hero-actions { display: flex; align-items: center; gap: 28px; margin-top: 33px; }
+.ot-quiet-link { display: inline-flex; align-items: center; gap: 15px; font-size: 13px; }
+.ot-hero-note { margin-top: 63px; display: flex; align-items: center; gap: 12px; font-size: 11px; line-height: 1.8; color: #d3d4cb; }
+.ot-hero-note > span > span { color: #848580; }
+.ot-mini-orbit { font-size: 36px; font-family: Georgia, serif; line-height: 1; color: var(--ot-accent); }
+.ot-hero-visual { position: relative; padding-bottom: 22px; min-width: 0; }
+.ot-orbit { width: 100%; aspect-ratio: 1; position: relative; overflow: hidden; color: #575b4d; }
+.ot-orbit-grid { position: absolute; inset: 4%; background-image: radial-gradient(#646952 1px, transparent 1px); background-size: 23px 23px; opacity: .24; mask-image: radial-gradient(ellipse, #000 30%, transparent 72%); }
+.ot-orbit-lines { position: absolute; inset: 0; width: 100%; height: 100%; opacity: .63; }
+.ot-orbit-core { position: absolute; left: 50%; top: 50%; width: 32%; aspect-ratio: 1; display: grid; place-items: center; border-radius: 50%; transform: translate(-50%, -50%); color: #171810; background: var(--ot-accent); box-shadow: 0 0 0 11px #f4e65d08, 0 0 0 12px #f4e65d0c; }
+.ot-orbit-core svg { width: 46%; height: 46%; }
+.ot-orbit-node { display: flex; gap: 10px; align-items: center; position: absolute; padding: 14px 17px; font-size: 12px; color: #ebede4; background: #1d1e1c; border: 1px solid #404138; border-radius: 6px; box-shadow: 0 12px 30px #0003; }
+.ot-orbit-node > svg { width: 20px; height: 20px; }
+.ot-orbit-node i { width: 5px; height: 5px; border-radius: 50%; background: var(--ot-accent); margin-left: 8px; }
+.ot-node-home { top: 18%; left: 4%; }
+.ot-node-shop { bottom: 21%; right: 0; }
+.ot-orbit-caption { position: absolute; bottom: 4%; width: 100%; display: flex; align-items: center; justify-content: center; gap: 9px; font: 8px ui-monospace, monospace; letter-spacing: 1.5px; color: #8d9081; }
+.ot-coordinate { position: absolute; color: #777a6c; font: 8px ui-monospace, monospace; letter-spacing: .5px; }
+.ot-coordinate-top { right: 7%; top: 10%; }.ot-coordinate-bottom { left: 7%; bottom: 14%; }
+.ot-visual-label { margin: 9px 10px 0; border-top: 1px solid var(--ot-line); padding-top: 15px; display: flex; justify-content: space-between; font: 8px ui-monospace, monospace; letter-spacing: 1.5px; color: #83857a; }
+.ot-paths { margin: 0 clamp(24px, 5vw, 88px); border-top: 1px solid var(--ot-line); padding: 45px 0 72px; }
+.ot-section-heading { display: grid; grid-template-columns: 1fr 1fr; align-items: end; gap: 15px 30px; }
+.ot-section-heading > .ot-eyebrow { grid-column: 1 / -1; color: var(--ot-muted); }
+.ot-section-heading h2 { font-family: Georgia, serif; font-size: clamp(26px, 2.6vw, 39px); font-weight: 400; letter-spacing: -1.3px; }
+.ot-section-heading > p:last-child { color: var(--ot-muted); text-align: right; font-size: 12px; padding-bottom: 5px; }
+.ot-path-grid { display: grid; grid-template-columns: repeat(3, 1fr); margin-top: 35px; border: 1px solid var(--ot-line); border-radius: 7px; overflow: hidden; }
+.ot-path { min-width: 0; padding: 30px; transition: background .2s; }
+.ot-path:hover { background: #1c1d1f; }
+.ot-path + .ot-path { border-left: 1px solid var(--ot-line); }
+.ot-path-top { display: flex; align-items: center; justify-content: space-between; gap: 15px; font: 9px ui-monospace, monospace; letter-spacing: 1px; color: var(--ot-muted); }
+.ot-path-organizer .ot-path-top > svg { color: #f4e65d; }.ot-path-recipient .ot-path-top > svg { color: #b1c9ee; }.ot-path-merchant .ot-path-top > svg { color: #e7b88d; }
+.ot-path h3 { margin: 31px 0 14px; font-size: 23px; letter-spacing: -.7px; font-weight: 400; line-height: 1.3; }
+.ot-path > p { font-size: 13px; line-height: 1.7; color: var(--ot-muted); max-width: 290px; }
+.ot-path-link { margin-top: 32px; display: flex; align-items: center; justify-content: space-between; gap: 15px; font-size: 12px; }
+.ot-home-bottom { background: #e9eadf; padding: 65px clamp(24px, 5vw, 88px); color: #1d2117; display: flex; justify-content: space-between; gap: 30px; align-items: center; }
+.ot-home-bottom h2 { font: 400 36px/1.25 Georgia, serif; letter-spacing: -.8px; margin-top: 20px; }
+.ot-home-bottom .ot-button { background: #1d2117; color: #fff !important; flex-shrink: 0; }
+.ot-footer { margin: 0 clamp(24px, 5vw, 88px); padding: 36px 0; display: flex; align-items: center; justify-content: space-between; gap: 25px; }
+.ot-footer .ot-brand > span { font-size: 24px; }.ot-footer > p { font-size: 10px; line-height: 1.8; color: #97998f; }
+.ot-footer > a:last-child { display: flex; align-items: center; gap: 20px; font-size: 11px; }
+/* A focused, frontend-only setup. All selectors are scoped away from the existing demo. */
+.ot-setup-header { height: 90px; }
+.ot-header-prompt { color: #94978e; font-size: 12px; }
+.ot-text-button { display: flex; align-items: center; gap: 15px; color: var(--ot-text); background: none; border: 0; padding: 8px 0; font-size: 13px; }
+.ot-onboarding { display: grid; grid-template-columns: minmax(350px, .94fr) minmax(480px, 1.06fr); max-width: 1600px; margin: auto; padding: 24px; gap: 24px; min-height: calc(100svh - 90px); }
+.ot-theme-organizer { --ot-story: #ecebdc; }.ot-theme-recipient { --ot-story: #e0e8ee; --ot-accent: #b7d3f4; }.ot-theme-merchant { --ot-story: #ebe2d9; --ot-accent: #eaba95; }
+.ot-story { border-radius: 9px; background: var(--ot-story); color: #24291f; padding: clamp(28px, 4vw, 64px); position: relative; overflow: hidden; min-height: 740px; display: flex; flex-direction: column; }
+.ot-story-top { display: flex; justify-content: space-between; align-items: center; gap: 16px; }
+.ot-story-top .ot-eyebrow { font-size: 8px; letter-spacing: 1.2px; }
+.ot-story-index { font: 8px ui-monospace, monospace; white-space: nowrap; color: #777c6e; }
+.ot-story h2 { margin-top: 58px; position: relative; z-index: 1; font-family: Georgia, serif; font-size: clamp(40px, 4.6vw, 71px); line-height: 1.04; letter-spacing: -3.5px; font-weight: 400; }
+.ot-story h2 > span { color: #747b5c; font-style: italic; }
+.ot-story-description { max-width: 310px; margin-top: 24px !important; font-size: 14px; line-height: 1.7; color: #6a705f; position: relative; z-index: 1; }
+.ot-story .ot-orbit { width: 410px; position: absolute; right: -60px; top: 320px; opacity: .7; pointer-events: none; transform: rotate(-9deg); }
+.ot-story .ot-orbit-core { background: #c8cead; box-shadow: none; }
+.ot-theme-recipient .ot-story .ot-orbit-core { background: #b5c9dc; }.ot-theme-merchant .ot-story .ot-orbit-core { background: #d3b79b; }
+.ot-story .ot-orbit-lines { opacity: .45; }.ot-story .ot-orbit-node, .ot-story .ot-orbit-caption, .ot-story .ot-coordinate { display: none; }
+.ot-story-bottom { margin-top: auto; padding-top: 200px; position: relative; z-index: 1; }
+.ot-story-bottom > p { border-top: 1px solid #24291f26; padding-top: 19px; margin-top: 25px; color: #777d6a; font-size: 10px; }
+.ot-story-bottom ol { padding: 0; margin: 0; list-style: none; }
+.ot-story-bottom li { font-size: 12px; padding: 10px 0; display: flex; gap: 17px; }.ot-story-bottom li > span { font: 10px ui-monospace, monospace; color: #787e6b; }
+.ot-story-message { font: 9px/1.8 ui-monospace, monospace; letter-spacing: 1.6px; display: flex; flex-direction: column; }
+.ot-setup-panel { min-width: 0; display: flex; flex-direction: column; padding: 18px clamp(24px, 3.6vw, 64px) 0; }
+.ot-setup-topline { display: flex; align-items: center; justify-content: space-between; gap: 15px; }
+.ot-back { display: inline-flex; align-items: center; gap: 9px; font-size: 11px; padding: 8px 0; background: none; border: 0; color: #afb0a8; }
+.ot-back:hover { color: #fff; }
+.ot-preview-tag { display: inline-flex; align-items: center; gap: 6px; border: 1px solid #363830; border-radius: 4px; padding: 5px 7px; font: 8px ui-monospace, monospace; color: #a4a99a; letter-spacing: .5px; }
+.ot-preview-tag > span { height: 4px; width: 4px; border-radius: 50%; background: #acbb7a; }
+.ot-setup-content { width: 100%; max-width: 440px; margin: auto; padding: 48px 0 60px; }
+.ot-progress { display: flex; gap: 5px; max-width: 150px; margin-bottom: 31px; }
+.ot-progress > span { height: 2px; flex: 1; background: #37392f; }.ot-progress > .is-complete { background: var(--ot-accent); }
+.ot-step-label { color: #929688; font-size: 9px; }.ot-step-label > span { margin: 0 2px; color: #54584a; }
+.ot-setup-content h1 { font-size: clamp(29px, 2.8vw, 41px); line-height: 1.14; font-weight: 400; letter-spacing: -1.7px; margin-top: 20px; max-width: 440px; }
+.ot-setup-subtitle { color: #979b90; font-size: 13px; line-height: 1.7; margin-top: 15px !important; }
+.ot-form, .ot-choice-form, .ot-review, .ot-ready { margin-top: 33px; }
+.ot-field + .ot-field { margin-top: 23px; }
+.ot-field label { display: flex; align-items: center; justify-content: space-between; color: #d6d7ce; font-size: 12px; font-weight: 400; margin-bottom: 10px; }
+.ot-field input, .ot-field select { width: 100%; min-width: 0; margin: 0; border: 1px solid #35382f; border-radius: 5px; background: #191b17; color: #f2f3e9; padding: 15px 16px; height: 51px; font-size: 13px; box-shadow: none; color-scheme: dark; }
+.ot-field input::placeholder { color: #75796c; opacity: 1; }.ot-field input:focus, .ot-field select:focus { outline: none; border-color: var(--ot-accent); box-shadow: 0 0 0 3px #f4e65d0d; }
+.ot-field select { padding-right: 30px; }
+.ot-field-hint { display: block; color: #929888; font-size: 10px; line-height: 1.7; margin-top: 9px !important; }
+.ot-optional { color: #878d7b; font-size: 10px; }
+.ot-form-note { color: #8e9484; font-size: 10px; line-height: 1.8; text-align: center; margin: 17px auto 0 !important; max-width: 345px; }
+.ot-form-switch { border-top: 1px solid #2b2e25; margin-top: 30px; padding-top: 23px; text-align: center; font-size: 11px; color: #979d8e; }
+.ot-form-switch button { background: none; border: 0; padding: 0 3px; color: var(--ot-text); font-size: 11px; }
+.ot-options { display: grid; gap: 12px; }
+.ot-option { display: flex; align-items: center; gap: 16px; padding: 23px 20px; min-height: 105px; text-align: left; border: 1px solid #36392f; border-radius: 7px; background: transparent; color: #efefe6; width: 100%; transition: background .15s, border-color .15s; }
+.ot-option:hover { background: #20221b; }.ot-option.is-selected { background: #22251b; border-color: var(--ot-accent); }
+.ot-option-icon { width: 43px; height: 43px; display: inline-flex; align-items: center; justify-content: center; border: 1px solid #3b3f32; border-radius: 7px; background: #26291f; color: var(--ot-accent); flex-shrink: 0; }
+.ot-option > span:nth-child(2) { flex: 1; min-width: 0; }.ot-option b { display: block; font-size: 15px; font-weight: 400; letter-spacing: -.2px; }.ot-option > span > span { display: block; font-size: 11px; color: #9fa590; margin-top: 7px; line-height: 1.5; }
+.ot-radio { width: 15px; height: 15px; border: 1px solid #676d59; border-radius: 50%; flex-shrink: 0; }.is-selected > .ot-radio { border: 4px solid var(--ot-accent); background: #20221a; }
+.ot-purpose { border: 0; padding: 0; margin: 0; min-width: 0; }.ot-purpose legend { font-size: 12px; color: #cdd3be; margin-bottom: 14px; }
+.ot-purpose > label { display: flex; align-items: center; gap: 14px; padding: 18px; border: 1px solid #383d2f; border-radius: 5px; color: #e7eddb; margin-bottom: 10px; font-size: 12px; font-weight: 400; cursor: pointer; }
+.ot-purpose > label > span:first-of-type { flex: 1; }.ot-purpose > label > input { position: absolute; opacity: 0; width: 1px; height: 1px; }.ot-purpose > label:has(input:focus-visible) { outline: 2px solid var(--ot-accent); outline-offset: 3px; }
+.ot-purpose .is-selected { border-color: var(--ot-accent); background: #24291b; }
+.ot-context-note { display: flex; align-items: flex-start; gap: 13px; padding: 18px; background: #1c231f; border: 1px solid #354238; border-radius: 5px; margin-top: 25px; color: #b4cbba; }
+.ot-context-note p { font-size: 11px; line-height: 1.8; }
+.ot-profile { display: flex; align-items: center; gap: 15px; padding-bottom: 24px; border-bottom: 1px solid #34372d; }.ot-profile > div > span { font: 8px ui-monospace, monospace; letter-spacing: 1px; color: #939c80; }.ot-profile h2 { margin-top: 7px; font-size: 21px; font-weight: 400; letter-spacing: -.7px; overflow-wrap: anywhere; }
+.ot-review dl { margin: 9px 0 0; }.ot-review dl > div { display: flex; justify-content: space-between; gap: 22px; padding: 13px 0; border-bottom: 1px solid #282d22; font-size: 12px; }.ot-review dt { color: #979e8b; flex-shrink: 0; }.ot-review dd { margin: 0; text-align: right; overflow-wrap: anywhere; min-width: 0; }
+.ot-ready-space { border: 1px solid #3a4030; background: #1a1e16; border-radius: 8px; padding: 24px; }.ot-ready-space-top { display: flex; justify-content: space-between; align-items: center; gap: 10px; }.ot-space-avatar { width: 42px; height: 42px; display: grid; place-items: center; background: var(--ot-accent); color: #252b1c; font: 22px Georgia, serif; border-radius: 50%; }.ot-ready-space h2 { font-size: 25px; font-weight: 400; letter-spacing: -.8px; margin-top: 25px; overflow-wrap: anywhere; }.ot-ready-space p { font-size: 12px; color: #a1ab90; line-height: 1.7; margin-top: 11px; }.ot-space-location { display: block; border-top: 1px solid #363f2a; margin-top: 23px; padding-top: 15px; font: 9px ui-monospace, monospace; color: #b9c5a3; }
+.ot-next-step { padding-top: 26px; }.ot-next-step > span { font: 8px ui-monospace, monospace; letter-spacing: 1px; color: #9ba78a; }.ot-next-step h3 { font-size: 17px; font-weight: 400; letter-spacing: -.4px; margin-top: 12px; }.ot-next-step p { color: #939f81; font-size: 11px; line-height: 1.7; margin-top: 10px; }
+.ot-start-over { display: flex; align-items: center; gap: 15px; margin: 23px auto 0; padding: 7px 0; border: 0; background: none; color: #b7c3a5; font-size: 11px; }
+.ot-setup-footer { display: flex; align-items: center; justify-content: space-between; gap: 20px; border-top: 1px solid #2b2f24; padding: 20px 0 7px; color: #7f8972; font: 8px ui-monospace, monospace; letter-spacing: .6px; }.ot-setup-footer > a { color: #a5b195; }
+.ot-loading { min-height: 100vh; display: grid; place-items: center; color: #a8b29a; font-size: 13px; }
+@media (min-width: 1700px) { .ot-paths, .ot-footer { max-width: 1424px; margin-left: auto; margin-right: auto; } }
+@media (max-width: 1100px) {
+  .ot-nav { gap: 22px; }.ot-hero { padding-top: 70px; gap: 15px; }.ot-hero-copy h1 { font-size: 67px; letter-spacing: -3.7px; }.ot-path { padding: 25px; }.ot-path h3 { font-size: 21px; }
+  .ot-onboarding { grid-template-columns: minmax(290px, .85fr) minmax(420px, 1.15fr); gap: 10px; padding: 16px; }.ot-story { padding: 30px; }.ot-story h2 { font-size: 49px; letter-spacing: -2.5px; }.ot-story-index { display: none; }.ot-story .ot-orbit { width: 360px; right: -120px; }.ot-setup-panel { padding-left: 28px; padding-right: 28px; }
+}
+@media (max-width: 800px) {
+  .ot-header { height: 80px; padding: 0 24px; gap: 16px; }.ot-nav { display: none; }.ot-header-actions { gap: 16px; }.ot-brand > span { font-size: 26px; }.ot-brand > svg { width: 25px; }.ot-header .ot-button-small { gap: 12px; padding: 11px 13px; font-size: 11px; }
+  .ot-hero { grid-template-columns: 1fr; padding: 58px 24px 40px; }.ot-hero-copy h1 { font-size: clamp(53px, 9vw, 78px); letter-spacing: -3.5px; }.ot-hero-description { max-width: 440px; font-size: 15px; }.ot-hero-note { margin-top: 35px; }.ot-hero-visual { max-width: 510px; width: 100%; margin: 0 auto; }.ot-orbit { margin-top: 10px; }.ot-section-heading { grid-template-columns: 1fr; }.ot-section-heading > p:last-child { text-align: left; }.ot-path-grid { grid-template-columns: 1fr; }.ot-path + .ot-path { border-left: 0; border-top: 1px solid var(--ot-line); }.ot-path { padding: 28px; }.ot-path h3 { margin-top: 20px; font-size: 25px; }.ot-path > p { max-width: 420px; }.ot-path-link { margin-top: 23px; }.ot-home-bottom { align-items: flex-start; flex-direction: column; padding: 45px 24px; }.ot-home-bottom h2 { font-size: 30px; }.ot-footer { flex-wrap: wrap; align-items: flex-start; }.ot-footer > p { order: 3; flex-basis: 100%; }.ot-footer .ot-brand > span { font-size: 23px; }
+  .ot-setup-header { height: 80px; }.ot-header-prompt { display: none; }.ot-onboarding { display: block; min-height: calc(100svh - 80px); padding: 16px 24px 0; }.ot-story { display: none; }.ot-setup-panel { padding: 0; min-height: calc(100svh - 96px); }.ot-setup-content { margin: auto; max-width: 440px; padding-top: 45px; padding-bottom: 50px; }.ot-setup-content h1 { font-size: 36px; }.ot-setup-footer { padding-bottom: 23px; }.ot-setup-topline { max-width: 440px; width: 100%; margin: 0 auto; }.ot-progress { margin-bottom: 29px; }.ot-option { min-height: 100px; }
+}
+@media (max-width: 380px) {
+  .ot-header { padding: 0 18px; gap: 12px; }.ot-header-actions { gap: 12px; font-size: 11px; }.ot-header .ot-button { gap: 9px; padding: 10px; }.ot-brand { gap: 6px; }.ot-brand > span { font-size: 23px; }.ot-header .ot-brand > svg { width: 21px; }.ot-hero { padding-left: 20px; padding-right: 20px; }.ot-hero-copy h1 { font-size: 48px; letter-spacing: -2.7px; }.ot-hero-actions { gap: 17px; }.ot-hero-actions .ot-button { padding: 14px 16px; gap: 20px; }.ot-quiet-link { font-size: 11px; gap: 7px; }.ot-paths, .ot-footer { margin-left: 20px; margin-right: 20px; }.ot-setup-content h1 { font-size: 31px; }.ot-onboarding { padding-left: 20px; padding-right: 20px; }.ot-option { gap: 12px; padding: 19px 14px; }.ot-option > span > span { font-size: 10px; }.ot-option-icon { width: 35px; height: 39px; }.ot-setup-footer { font-size: 7px; gap: 8px; }
+}
+@media (prefers-reduced-motion: reduce) { .ot-experience *, .ot-experience *::before, .ot-experience *::after { transition: none !important; scroll-behavior: auto !important; } }
+
+/* Simplified setup: one readable form, one primary action, no decorative sidebar. */
+.ot-header.ot-simple-header { justify-content: center; height: 90px; border-bottom: 0; }
+.ot-onboarding.ot-simple-onboarding { display: block; max-width: 540px; padding: 35px 28px 75px; min-height: calc(100svh - 90px); margin: 0 auto; }
+.ot-simple-onboarding .ot-setup-panel { min-height: 0; padding: 0; display: block; }
+.ot-simple-onboarding .ot-setup-content { max-width: none; padding: 0; margin: 0; }
+.ot-simple-onboarding .ot-setup-topline { margin-bottom: 28px; width: 100%; max-width: none; }
+.ot-simple-onboarding .ot-back { color: #d0d3c8; font-size: 16px; min-height: 44px; padding: 10px 0; }
+.ot-simple-step { font-size: 14px; color: #a8ae9e; }
+.ot-simple-onboarding .ot-setup-content h1 { font-size: 36px; line-height: 1.2; letter-spacing: -1.2px; margin: 0; max-width: none; }
+.ot-simple-onboarding .ot-setup-subtitle { font-size: 17px; line-height: 1.6; color: #b0b5a8; margin-top: 14px !important; }
+.ot-simple-onboarding .ot-form, .ot-simple-onboarding .ot-choice-form, .ot-simple-onboarding .ot-review, .ot-simple-onboarding .ot-ready { margin-top: 35px; }
+.ot-simple-onboarding .ot-field + .ot-field { margin-top: 25px; }
+.ot-simple-onboarding .ot-field label, .ot-simple-onboarding .ot-purpose legend { font-size: 17px; color: #e7e9e1; margin-bottom: 12px; }
+.ot-simple-onboarding .ot-field input, .ot-simple-onboarding .ot-field select { height: 60px; padding: 16px; font-size: 18px; border-color: #4b5042; }
+.ot-simple-onboarding .ot-field input::placeholder { color: #9ba28e; }
+.ot-simple-onboarding .ot-field-hint, .ot-simple-onboarding .ot-context-note p { font-size: 14px; line-height: 1.65; color: #abb59a; }
+.ot-simple-onboarding .ot-button { min-height: 60px; font-size: 18px; padding: 17px 23px; }
+.ot-simple-onboarding .ot-form-note { font-size: 14px; line-height: 1.6; max-width: none; margin-top: 20px !important; color: #aab19e; }
+.ot-simple-onboarding .ot-form-switch { font-size: 16px; line-height: 1.6; border: 0; padding: 0; margin-top: 27px; }
+.ot-simple-onboarding .ot-form-switch button { font-size: 16px; text-decoration: underline; text-underline-offset: 4px; padding: 6px; }
+.ot-simple-onboarding .ot-option { padding: 23px 20px; min-height: 110px; }
+.ot-simple-onboarding .ot-option b { font-size: 20px; }.ot-simple-onboarding .ot-option > span > span { font-size: 15px; line-height: 1.5; }
+.ot-simple-onboarding .ot-radio { width: 20px; height: 20px; }
+.ot-simple-onboarding .ot-purpose > label { padding: 21px 18px; font-size: 17px; }.ot-simple-onboarding .ot-optional { font-size: 14px; }
+.ot-simple-onboarding .ot-review dl > div { font-size: 16px; padding: 16px 0; }.ot-simple-onboarding .ot-profile > div > span { font-size: 12px; }.ot-simple-onboarding .ot-profile h2 { font-size: 25px; }
+.ot-simple-onboarding .ot-ready-space p, .ot-simple-onboarding .ot-next-step p { font-size: 15px; line-height: 1.65; }.ot-simple-onboarding .ot-ready-space .ot-preview-tag { font-size: 11px; }.ot-simple-onboarding .ot-space-location { font-size: 14px; }.ot-simple-onboarding .ot-next-step > span { font-size: 11px; }.ot-simple-onboarding .ot-next-step h3 { font-size: 22px; line-height: 1.4; }.ot-simple-onboarding .ot-start-over { font-size: 16px; min-height: 44px; }
+@media (max-width: 600px) { .ot-header.ot-simple-header { height: 80px; }.ot-onboarding.ot-simple-onboarding { padding: 28px 24px 55px; min-height: calc(100svh - 80px); }.ot-simple-onboarding .ot-setup-content h1 { font-size: 31px; }.ot-simple-onboarding .ot-setup-subtitle { font-size: 16px; }.ot-simple-onboarding .ot-option { gap: 12px; padding: 20px 15px; }.ot-simple-onboarding .ot-option b { font-size: 19px; }.ot-simple-onboarding .ot-option > span > span { font-size: 14px; }.ot-simple-onboarding .ot-option-icon { width: 37px; height: 42px; }.ot-simple-onboarding .ot-review dl > div { font-size: 15px; }.ot-simple-onboarding .ot-button { font-size: 17px; gap: 14px; } }

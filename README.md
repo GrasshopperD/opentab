@@ -1,5 +1,7 @@
 # OpenTab Global
 
+**Frontend design branch:** the new welcome page is at `/` or `/home`; role-based setup is at `/onboarding`. Sign-up/sign-in and profile setup are frontend previews only. The original working demo remains at `/demo`, `/demo/home`, `/demo/sender`, `/demo/family` and `/demo/shop`, with original compatibility routes preserved. Backend and payment implementations are unchanged. Details: [frontend onboarding](docs/ONBOARDING_FRONTEND.md).
+
 **Family support that works at the corner shop, even when the phone is offline.**
 
 A relative abroad funds a shared family balance on Stellar. A family member back home pays at participating local shops by
