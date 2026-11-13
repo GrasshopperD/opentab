@@ -1,0 +1,11 @@
+/* Judge introduction at the top of /demo (Demo Mode). Uses the demo's existing color tokens. */
+.judge-intro { background: var(--card, #fff); border: 1px solid var(--line); border-left: 5px solid var(--accent); border-radius: 14px; padding: 20px 20px 18px; margin: 18px 0 22px; }
+.judge-intro .eyebrow { margin: 0 0 6px; }
+.judge-intro h1 { margin: 0 0 10px; }
+.judge-lead { font-size: 17px; line-height: 1.55; margin: 0 0 14px; }
+.judge-facts { margin: 0 0 16px; padding-left: 20px; display: grid; gap: 7px; line-height: 1.5; }
+.judge-product { display: flex; align-items: center; justify-content: space-between; gap: 14px; flex-wrap: wrap; background: var(--accent-soft); border-radius: 12px; padding: 14px 16px; }
+.judge-product > div { flex: 1 1 320px; min-width: 0; }
+.judge-product p { margin: 4px 0 0; color: var(--muted); font-size: 14px; line-height: 1.5; }
+.judge-product .btn { white-space: nowrap; text-decoration: none; display: inline-flex; align-items: center; }
+.judge-tagline { font-size: 22px; line-height: 1.25; margin: 0 0 8px; }

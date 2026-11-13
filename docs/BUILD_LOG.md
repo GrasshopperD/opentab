@@ -5,6 +5,32 @@ Only record results that were genuinely observed. Never record a planned step as
 
 ---
 
+## 2026-11-13: Session 10, Demo Mode as the default judge experience (branch `release/demo-default` from `main` @ `213e496`)
+
+- **Change:** `/` now redirects (HTTP 307, `redirect()` in `app/page.tsx`) to `/demo` on every domain of the project;
+  `/home` renders Alex's Product landing directly (it used to re-export the root page). `/demo` opens with a judge
+  introduction ("Judge Demo: OpenTab on Stellar Testnet": primary technical demonstration, Testnet not Mainnet, OTUSD has
+  no monetary value, Sender/Family/Shop tabs, which actions need the demo access code) and a "Want to see the consumer
+  experience?" note linking to Product Mode (read-only preview with real Family #7 data). Existing Demo content, Live
+  activity and mode switch unchanged. No API, signing, contract, security, config or service-worker change (verified with
+  `git diff` against main).
+- **Local results (production build):** typecheck clean; build OK; `/` → `307 location: /demo`; route sweep of 15 routes:
+  no page/console errors, no 5xx, no overflow at 390 px; unit 20/20 + 23/23; Playwright non-spending (Chromium + emulated
+  iPhone WebKit) **48 passed, 2 skipped, 0 failed**, including the new root-redirect/judge-intro test and the three Product
+  role journeys (onboarding → dashboard / wallet / business → Demo Sender / Family / Shop, real Family #7 balance, no
+  writes); security API 18/18; client bundles: no secrets. No Testnet transactions.
+
+## 2026-11-13: Session 9 production verification (two-mode release, PR #3)
+
+- PR #3 merged normally → main `213e496` (tree identical to tested `c434bb3`). Vercel `opentabglobal` production
+  deployment `3R3yCdUuhA21VvaBwcizPYbqgzua` succeeded (rollback reference `A8QX9y4rydzSkvL84Z7zgu49gfS1`, main `ca9dece`).
+- On https://opentabglobal.vercel.app: 16 routes without page/console errors or 5xx; all 7 invitation endpoints 503;
+  preflight public checks OK; Playwright non-spending suite **46 passed, 2 skipped**; security API 18/18; 23 production JS
+  files contain no secret values or `S…` keys. Live Family #7 at the time: balance 74.00, deposited 116.00, paid 42.00,
+  9 confirmed payments in the RPC window. The shorter custom domain could not be read (CLI account lacks `open-tab1`).
+
+---
+
 ## 2026-11-12: Session 9, two-mode release (branch `release/two-mode` from `main` @ `ca9dece`)
 
 - **Scope (user, final release):** one site with Demo Mode (the existing working Stellar Testnet app) and Product Mode

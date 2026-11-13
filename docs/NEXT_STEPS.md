@@ -11,7 +11,8 @@ Items marked **[USER]** need the user to do or approve something.
 - [x] Sender preset (Family #7) + product catalog + deployment-safety fixes (sessions 6-7, branch `ui-demo-catalog`, PR #1).
 - [x] Demo UI layout/flow cleanup (session 8, branch `demo-ui-polish`, based on `ui-demo-catalog`). **[USER]** review the Vercel preview; merge order would be PR #1 then this branch.
 - [x] `ui-demo-catalog` (PR #1) and `demo-ui-polish` (PR #2) merged; production `opentabglobal` deployed from main `ca9dece` (session 8). `INVITES_ENABLED` unset on Vercel.
-- [ ] Two-mode release (session 9, branch `release/two-mode`): Demo Mode | Product Mode switch, Alex's Product UI as a read-only showcase of live Family #7 data. Tested locally (see BUILD_LOG); merge + production deploy authorized by the user. Record the production verification in BUILD_LOG.
+- [x] Two-mode release (session 9, PR #3, main `213e496`): Demo Mode | Product Mode switch, Product Mode as a read-only showcase of live Family #7 data. Production verified (BUILD_LOG).
+- [x] Root `/` opens Demo Mode with a judge introduction (session 10, branch `release/demo-default`).
 - [ ] Confirm the new short production domain in the Vercel dashboard (the CLI account has no access to team `open-tab1`).
 - [ ] Later (not in this release): fuller Product Mode backend integration is preserved on `feat/product-backend-integration` (`494b802`, tests incomplete).
 - [ ] Before the demo: open the deployed site online on the demo phone once (updates the cached app so it signs item lists); re-pair the phone to Family #7 via manual pairing.
