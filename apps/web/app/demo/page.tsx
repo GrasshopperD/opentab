@@ -5,6 +5,7 @@ import { EXPLORER_CONTRACT, EXPLORER_TX, MERCHANTS, TOKEN_CODE, TOKEN_ID, TOKEN_
 import { EVIDENCE, TOKEN_ISSUER } from "@/lib/evidence";
 import { Preflight } from "./preflight";
 import { LiveActivity } from "./live-activity";
+import "./judge-intro.css";
 
 export const metadata: Metadata = { title: "OpenTab Global: judge demo" };
 
@@ -19,8 +20,26 @@ const FLOW = [
 export default function Demo() {
   return (
     <>
-      <p className="eyebrow">Judge demo</p>
-      <h1>Pay at the corner shop with a phone that has no data.</h1>
+      <section className="judge-intro" aria-labelledby="judge-h" data-testid="judge-intro">
+        <p className="eyebrow">Start here · primary technical demonstration</p>
+        <h1 id="judge-h">Judge Demo: OpenTab on Stellar Testnet</h1>
+        <p className="judge-lead">Explore our working demonstration of offline family payments. Senders fund a family wallet, family
+          members authorize payments without internet, and merchants settle confirmed transactions on Stellar Testnet.</p>
+        <ul className="judge-facts">
+          <li><b>For judges:</b> this Demo Mode is the real, working app. Use the <Link href="/demo/sender">Sender</Link>, <Link href="/demo/family">Family</Link> and <Link href="/demo/shop">Shop</Link> tabs above.</li>
+          <li><b>Stellar Testnet, not Mainnet.</b> Every confirmation is a real Testnet transaction you can open on Stellar Expert.</li>
+          <li><b>No real money.</b> Payments use the OTUSD test token, which has no monetary value.</li>
+          <li><b>Demo access code:</b> funding and pairing (Sender) and settling payments (Shop) need the demo access code; the Family wallet is open to everyone.</li>
+        </ul>
+        <div className="judge-product" data-testid="product-mode-note">
+          <div><b>Want to see the consumer experience?</b>
+            <p>Switch to Product Mode to explore how OpenTab would look for everyday families and merchants. It is a read-only
+              preview of the consumer interface, showing the real demo Family #7 data where supported; payments still run here in Demo Mode.</p></div>
+          <Link className="btn" href="/home" prefetch={false}>Open Product Mode →</Link>
+        </div>
+      </section>
+
+      <h2 className="judge-tagline">Pay at the corner shop with a phone that has no data.</h2>
       <p className="lead">A relative abroad funds a family balance on Stellar. At a participating shop, the family member approves the
         purchase on their phone while offline; the connected shop submits that approval and is paid by a smart contract.</p>
 

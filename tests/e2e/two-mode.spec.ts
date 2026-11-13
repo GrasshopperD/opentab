@@ -26,7 +26,8 @@ test("the Demo Mode | Product Mode switch is on every entry page and switches bo
   for (const path of ["/", "/home", "/business", "/dashboard", "/wallet", "/onboarding", "/demo", "/demo/sender", "/demo/family", "/demo/shop", "/sender", "/family", "/shop"]) {
     await page.goto(path);
     await expect(switcher(page), path).toBeVisible();
-    const demo = ["/demo", "/sender", "/family", "/shop"].some((d) => path === d || path.startsWith(d + "/"));
+    // "/" opens Demo Mode (redirects to /demo).
+    const demo = path === "/" || ["/demo", "/sender", "/family", "/shop"].some((d) => path === d || path.startsWith(d + "/"));
     await expect(switcher(page).getByRole("link", { name: demo ? "Demo Mode" : "Product Mode" }), path).toHaveAttribute("aria-current", "true");
   }
   await page.goto("/demo/sender");
@@ -121,3 +122,58 @@ for (const width of [320, 390, 768, 1440]) {
     }
   });
 }
+
+test("the site root opens Demo Mode: / redirects to /demo, which introduces the judge demo and points to Product Mode", async ({ page, request }) => {
+  const res = await request.get("/", { maxRedirects: 0 });
+  expect([307, 308]).toContain(res.status());
+  expect(new URL(res.headers()["location"], "http://x").pathname).toBe("/demo");
+  await page.goto("/");
+  await expect(page).toHaveURL(/\/demo$/);
+  const intro = page.getByTestId("judge-intro");
+  await expect(intro.getByRole("heading", { level: 1, name: "Judge Demo: OpenTab on Stellar Testnet" })).toBeVisible();
+  await expect(intro).toContainText("Stellar Testnet, not Mainnet");
+  await expect(intro).toContainText("no monetary value");
+  await expect(intro).toContainText("demo access code");
+  for (const tab of ["Sender", "Family", "Shop"]) await expect(intro.getByRole("link", { name: tab, exact: true })).toHaveAttribute("href", `/demo/${tab === "Shop" ? "shop" : tab.toLowerCase()}`);
+  await expect(page.getByTestId("product-mode-note")).toContainText("read-only preview");
+  await expect(switcher(page).getByRole("link", { name: "Demo Mode" })).toHaveAttribute("aria-current", "true");
+  await page.getByTestId("product-mode-note").getByRole("link", { name: /Open Product Mode/ }).click();
+  await expect(page).toHaveURL(/\/home$/);
+  await expect(page.getByRole("heading", { name: /Support, closer to home/ })).toBeVisible();    // Product pages are not redirected
+  for (const path of ["/home", "/dashboard", "/wallet", "/business", "/onboarding"]) {
+    await page.goto(path); expect(new URL(page.url()).pathname, path).toBe(path);
+  }
+});
+
+test("all three Product roles: onboarding → role page with real data → its working Demo screen (no writes)", async ({ page }) => {
+  const writes = noWrites(page);
+  const real = await realFamily(page);
+  const balance = P.formatTokenAmount(BigInt(real.family.balance));
+  const choose = async (option: RegExp, cta: string) => {
+    await page.context().clearCookies();                          // role preference cookie only; storage untouched
+    await page.goto("/onboarding");
+    await page.getByRole("button", { name: option }).click();
+    await page.getByRole("button", { name: "Continue" }).click();
+    await page.locator(".ot-ready .ot-button").filter({ hasText: cta }).click();
+  };
+  // Organizer → dashboard (real balance + confirmed activity) → Demo Sender
+  await choose(/I’m an organizer/, "Open my dashboard");
+  await expect(page).toHaveURL(/\/dashboard$/);
+  await expect(page.getByTestId("dash-amount")).toContainText(balance);
+  await expect(page.getByTestId("dash-activity").locator(".dash-purchases li")).toHaveCount(Math.min(5, real.newest.length));
+  await page.getByTestId("dash-balance").getByRole("link", { name: /Add money/ }).click();
+  await expect(page).toHaveURL(/\/demo\/sender$/); await expect(page.getByTestId("wallet")).toContainText(`Family #${FAMILY}`);
+  // Family member → wallet (real balance) → Scan to Pay → Demo Family Wallet
+  await choose(/I’m a family member/, "Open my Family Wallet");
+  await expect(page).toHaveURL(/\/wallet$/);
+  await expect(page.getByTestId("wallet-amount")).toContainText(balance);
+  await page.getByTestId("scan-to-pay").click();
+  await expect(page).toHaveURL(/\/demo\/family$/); await expect(page.getByRole("heading", { name: /Family Wallet/ })).toBeVisible();
+  // Merchant → business → Open Merchant Checkout → Demo Merchant Checkout
+  await choose(/I’m a merchant/, "See the shop experience");
+  await expect(page).toHaveURL(/\/business$/);
+  await expect(page.getByTestId("catalog")).toContainText("Milk");
+  await page.getByTestId("open-checkout").click();
+  await expect(page).toHaveURL(/\/demo\/shop$/); await expect(page.getByRole("heading", { name: "Merchant Checkout" })).toBeVisible();
+  expect(writes).toEqual([]);
+});

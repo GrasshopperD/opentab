@@ -46,7 +46,7 @@ test("sign in explains there are no accounts; business link preselects merchant"
 for (const width of [320, 375, 390, 430, 768, 1440]) {
   test(`new entry pages fit ${width}px`, async ({ page }) => {
     await page.setViewportSize({ width, height: 900 });
-    for (const path of ["/", "/home", "/onboarding", "/onboarding?mode=signin", "/onboarding?role=merchant", "/onboarding?role=recipient"]) {
+    for (const path of ["/home", "/onboarding", "/onboarding?mode=signin", "/onboarding?role=merchant", "/onboarding?role=recipient"]) {
       await page.goto(path);
       await expect(page.getByRole("link", { name: "OpenTab home", exact: true }).first()).toBeVisible();
       expect(await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth), path).toBeLessThanOrEqual(0);
