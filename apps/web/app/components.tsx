@@ -101,39 +101,6 @@ export async function api<T = any>(path: string, init?: RequestInit): Promise<T>
   return j as T;
 }
 
-/** Demo access gate for screens that operate server-held Testnet accounts. */
-export function DemoAccess({ onChange }: { onChange?: (ok: boolean) => void }) {
-  const [state, setState] = useState<{ authorized: boolean; enabled: boolean } | null>(null);
-  const [code, setCode] = useState("");
-  const [err, setErr] = useState("");
-  useEffect(() => {
-    api("/api/auth/status").then((s: any) => { if (!s.error) { setState(s); onChange?.(s.authorized); } });
-  }, [onChange]);
-  if (!state) return null;
-  if (!state.enabled) return <div className="status bad">Interactive demo is disabled on this deployment. Evidence links still work.</div>;
-  if (state.authorized) return (
-    <p className="muted">Demo operator access active. <button className="linkbtn" onClick={async () => {
-      await api("/api/auth/logout", { method: "POST", body: "{}" }); setState({ ...state, authorized: false }); onChange?.(false);
-    }}>Sign out</button></p>
-  );
-  return (
-    <div className="card">
-      <h2>Demo operator access</h2>
-      <p className="muted">This screen spends from demo Testnet accounts, so it needs the access code given to demonstrators and judges.</p>
-      <form onSubmit={async (e) => {
-        e.preventDefault(); setErr("");
-        const r: any = await api("/api/auth/login", { method: "POST", body: JSON.stringify({ code }) });
-        if (r.authorized) { setState({ ...state, authorized: true }); onChange?.(true); setCode(""); } else setErr(r.detail ?? r.error);
-      }}>
-        <label htmlFor="democode">Access code</label>
-        <input id="democode" type="password" autoComplete="off" value={code} onChange={(e) => setCode(e.target.value)} />
-        <button className="btn" type="submit" disabled={!code}>Unlock demo</button>
-      </form>
-      {err && <p className="warn">{err}</p>}
-    </div>
-  );
-}
-
 export const ERROR_TEXT: Record<string, string> = {
   InvoiceUsed: "This invoice has already been paid. The contract refused a second charge.",
   InsufficientFunds: "The family balance is not enough for this purchase.",
@@ -143,7 +110,9 @@ export const ERROR_TEXT: Record<string, string> = {
   FamilyNotFound: "That family does not exist on this vault.",
   NOT_CONFIGURED: "The server is missing its Testnet demo signer configuration.",
   NetworkError: "No connection to the server. Nothing was charged by this attempt unless the status check says so.",
-  Unauthorized: "Demo access code required (unlock at the top of the page).",
+  Unauthorized: "This is an operator-only action and is turned off in the public demo.",
+  OperatorOnly: "Revoking a device is an operator action and is turned off in the public demo.",
+  DemoFamilyOnly: "The public demo can only add funds to, or pair phones with, the demo family.",
   RateLimited: "Too many requests. Wait a minute and try again.",
   InFlight: "This invoice is already being submitted. Wait for the result.",
   DemoLocked: "Interactive demo is disabled on this deployment.",

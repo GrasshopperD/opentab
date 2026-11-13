@@ -1,5 +1,6 @@
 import { invoke, scv } from "@/lib/chain.server";
-import { guard } from "@/lib/guard.server";
+import { demoFamilyOnly, guard, operatorOnly } from "@/lib/guard.server";
+import { DEMO_FAMILY_ID } from "@/lib/config";
 import { badRequest, fail, ok, parseId } from "@/lib/api.server";
 import { fromHex } from "@opentab/shared";
 
@@ -8,12 +9,15 @@ export const dynamic = "force-dynamic";
 /** Register (or revoke) a recipient device's PUBLIC key. Private keys never reach the server. */
 export async function POST(req: Request) {
   try {
-    const g = await guard(req, { limit: 10 });
+    const g = await guard(req, { limit: 10, auth: "public" });   // public demo action (pairing): no access code
     if ("res" in g) return g.res;
     const body = g.body;
     const familyId = parseId(body.familyId);
+    const revoke = body.action === "revoke";
+    if (revoke && !g.sid) return operatorOnly("Revoking a device is an operator action and is turned off in the public demo.");
+    if (!g.sid && familyId !== BigInt(DEMO_FAMILY_ID)) return demoFamilyOnly(DEMO_FAMILY_ID);
     if (typeof body.publicKey !== "string" || !/^[0-9a-f]{64}$/.test(body.publicKey)) return badRequest("publicKey must be 64 lowercase hex chars");
-    const method = body.action === "revoke" ? "revoke_key" : "register_key";
+    const method = revoke ? "revoke_key" : "register_key";
     const r = await invoke("sender", method, [scv.u64(familyId), scv.bytes(fromHex(body.publicKey))]);
     return ok(r);
   } catch (e) { return fail(e); }

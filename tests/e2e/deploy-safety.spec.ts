@@ -6,7 +6,6 @@
 import { expect, test, type Page } from "@playwright/test";
 import * as P from "../../packages/shared/src/index";
 
-const CODE = process.env.OT_DEMO_CODE ?? "";
 const FAMILY = BigInt(process.env.OT_DEMO_FAMILY ?? "7");
 
 async function paste(page: Page, text: string) {
@@ -44,11 +43,8 @@ test("invitations are hidden and the invitation API fails closed when not enable
 });
 
 test("REGRESSION: shop rejects outdated or mismatched approvals, accepts exact ones (no submission)", async ({ page }) => {
-  expect(CODE, "set OT_DEMO_CODE").not.toBe("");
   await page.goto("/shop");
-  await page.locator("#democode").fill(CODE);
-  await page.getByRole("button", { name: "Unlock demo" }).click();
-  await expect(page.getByText("Demo operator access active")).toBeVisible();
+  await expect(page.locator("#democode")).toHaveCount(0);                  // public demo: no access-code form
   const sk = P.generateSecretKey();
   const bad = page.locator(".status.bad");
 

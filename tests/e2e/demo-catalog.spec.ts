@@ -1,26 +1,19 @@
 // REAL browser + REAL Stellar Testnet against the EXISTING demo family (default #7).
 // SPENDS demo OTUSD: one Milk purchase (3 OTUSD) from that family + Testnet XLM fees for one key registration and one payment.
-// Never creates, funds or resets a family. Needs OT_DEMO_CODE and a running app.
+// Never creates, funds or resets a family. Needs NO access code (fresh browser contexts) and a running app.
 import { expect, test, type BrowserContext, type Page } from "@playwright/test";
 import * as fs from "node:fs";
 import { paste } from "./helpers";
 
-const CODE = process.env.OT_DEMO_CODE ?? "";
 const FAMILY = process.env.OT_DEMO_FAMILY ?? "7";
 const OUT = "test-results/demo-catalog";
 
-async function unlock(page: Page) {
-  await page.locator("#democode").fill(CODE);
-  await page.getByRole("button", { name: "Unlock demo" }).click();
-  await expect(page.getByText("Demo operator access active")).toBeVisible();
-}
 const api = async (ctx: BrowserContext, path: string) => (await ctx.request.get(path)).json();
 const familyBalance = async (ctx: BrowserContext) => BigInt((await api(ctx, `/api/family/${FAMILY}`)).family.balance);
 const merchantBalance = async (ctx: BrowserContext) => BigInt((await api(ctx, "/api/merchant/A")).balance);
 const fmt2 = (n: bigint) => `${n / 10_000_000n}.${(n % 10_000_000n).toString().padStart(7, "0").slice(0, 2)}`;
 
 test("preset family, Milk $3.00, offline approval, settlement, itemized receipt, replay + tamper rejected", async ({ browser }) => {
-  expect(CODE, "set OT_DEMO_CODE").not.toBe("");
   fs.mkdirSync(OUT, { recursive: true });
   const operator = await browser.newContext({ acceptDownloads: true });
   const phone = await browser.newContext({ viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true });
@@ -30,7 +23,7 @@ test("preset family, Milk $3.00, offline approval, settlement, itemized receipt,
   const op = await operator.newPage();
   op.on("request", (r) => { if (r.url().includes("/api/sender/family")) createCalls.push(r.url()); });
   await op.goto("/sender");
-  await unlock(op);
+  await expect(op.locator("#democode")).toHaveCount(0);                    // public demo: no access-code form
   await expect(op.getByTestId("demo-family-note")).toContainText(`existing Family #${FAMILY}`);
   await expect(op.locator('label:has-text("Or enter family #") + input')).toHaveValue(FAMILY);
   const before = await familyBalance(operator);
@@ -63,7 +56,7 @@ test("preset family, Milk $3.00, offline approval, settlement, itemized receipt,
   // 3. Shop: catalog is the default; Milk x1 = USD 3.00 = 3.0000000 OTUSD at the illustrative 1.0000 rate.
   const shop = await operator.newPage();
   await shop.goto("/shop");
-  await expect(shop.getByText("Demo operator access active")).toBeVisible();
+  await expect(shop.locator("#democode")).toHaveCount(0);                  // no access-code form on the shop
   for (const p of ["Milk", "Bread", "Water", "Apples"]) await expect(shop.getByRole("radio", { name: new RegExp(p) })).toBeVisible();
   await shop.getByRole("radio", { name: /Water/ }).click();
   await shop.locator("#qty").fill("3");

@@ -29,7 +29,7 @@ export default function Demo() {
           <li><b>For judges:</b> this Demo Mode is the real, working app. Use the <Link href="/demo/sender">Sender</Link>, <Link href="/demo/family">Family</Link> and <Link href="/demo/shop">Shop</Link> tabs above.</li>
           <li><b>Stellar Testnet, not Mainnet.</b> Every confirmation is a real Testnet transaction you can open on Stellar Expert.</li>
           <li><b>No real money.</b> Payments use the OTUSD test token, which has no monetary value.</li>
-          <li><b>Demo access code:</b> funding and pairing (Sender) and settling payments (Shop) need the demo access code; the Family wallet is open to everyone.</li>
+          <li><b>No access code needed:</b> anyone can add funds to and pair a phone with demo Family #7 (Sender), approve on the Family wallet and settle at the Shop. Revoking devices and creating families are turned off.</li>
         </ul>
         <div className="judge-product" data-testid="product-mode-note">
           <div><b>Want to see the consumer experience?</b>
@@ -58,9 +58,9 @@ export default function Demo() {
       </section>
 
       <section className="grid3" aria-label="Try each role">
-        <Link href="/demo/sender" className="card role"><h2>1 · Sender</h2><p className="muted">See Family #7&apos;s balance, add funds, pair a family member. Needs the demo access code.</p></Link>
+        <Link href="/demo/sender" className="card role"><h2>1 · Sender</h2><p className="muted">See Family #7&apos;s balance, add funds, pair a family member. Public.</p></Link>
         <Link href="/demo/family" className="card role"><h2>2 · Family phone</h2><p className="muted">Set up the device, then Scan to Pay: review and approve offline, show the signed QR. Public.</p></Link>
-        <Link href="/demo/shop" className="card role"><h2>3 · Shop</h2><p className="muted">Select a product, show the invoice, scan the approval, settle on Stellar. Needs the access code.</p></Link>
+        <Link href="/demo/shop" className="card role"><h2>3 · Shop</h2><p className="muted">Select a product, show the invoice, scan the approval, settle on Stellar. Public.</p></Link>
       </section>
 
       <LiveActivity />

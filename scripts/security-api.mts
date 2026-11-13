@@ -1,21 +1,35 @@
-// Access-control / CSRF / input-limit tests against a running app. Spends nothing on chain
-// except one authorized read. Usage: OT_DEMO_CODE=<code> node --experimental-strip-types scripts/security-api.mts [baseUrl]
+// Access-control / CSRF / input-limit tests against a running app. Spends nothing on chain: every request that passes
+// the guard carries an invalid input, so nothing is signed or submitted. Usage: OT_DEMO_CODE=<code> node --experimental-strip-types scripts/security-api.mts [baseUrl]
 const BASE = process.argv[2] ?? "http://localhost:3000";
 let failures = 0;
 const check = (n: string, c: boolean, x = "") => { console.log(`${c ? "PASS" : "FAIL"} ${n} ${x}`); if (!c) failures++; };
 const J = { "content-type": "application/json" };
 const req = (p: string, h: Record<string, string>, body: string) => fetch(BASE + p, { method: "POST", headers: h, body });
 
-const MUTATIONS: [string, any][] = [
-  ["/api/sender/family", { amount: "1" }],
-  ["/api/sender/deposit", { familyId: "1", amount: "1" }],
-  ["/api/sender/key", { familyId: "1", publicKey: "00".repeat(32) }],
-  ["/api/merchant/pay", { merchantId: "A", authorization: "OTA1:{}" }],
-];
-for (const [p, b] of MUTATIONS) {
-  const r = await req(p, { ...J, origin: BASE }, JSON.stringify(b));
-  check(`no session -> 401 ${p}`, r.status === 401, String(r.status));
-}
+const DEMO = process.env.OT_DEMO_FAMILY ?? "7";
+const anon = (p: string, b: any) => req(p, { ...J, origin: BASE }, JSON.stringify(b));
+const err = async (r: Response) => { try { return (await r.json()).error; } catch { return ""; } };
+
+// 1. PUBLIC demo actions need NO access code: they pass the guard and reach input validation. Every input below is
+//    invalid, so nothing is signed or submitted.
+const pDep = await anon("/api/sender/deposit", { familyId: DEMO, amount: "999" });
+check("no code: deposit to demo family reaches validation (over cap -> 400)", pDep.status === 400, String(pDep.status));
+const pKey = await anon("/api/sender/key", { familyId: DEMO, publicKey: "zz" });
+check("no code: pairing on demo family reaches validation -> 400", pKey.status === 400, String(pKey.status));
+const pPay = await anon("/api/merchant/pay", { merchantId: "A", authorization: "OTA1:{not json" });
+check("no code: shop settlement reaches validation -> 400", pPay.status === 400, String(pPay.status));
+
+// 2. Without an operator session everything else stays closed, refused BEFORE anything is signed.
+const cFam = await anon("/api/sender/family", { amount: "1" });
+check("no session: create family -> 401", cFam.status === 401, String(cFam.status));
+const oDep = await anon("/api/sender/deposit", { familyId: "1", amount: "1" });
+check("no session: deposit to a non-demo family -> 403 DemoFamilyOnly", oDep.status === 403 && (await err(oDep)) === "DemoFamilyOnly", String(oDep.status));
+const oKey = await anon("/api/sender/key", { familyId: "1", publicKey: "00".repeat(32) });
+check("no session: pairing on a non-demo family -> 403 DemoFamilyOnly", oKey.status === 403 && (await err(oKey)) === "DemoFamilyOnly", String(oKey.status));
+const rev = await anon("/api/sender/key", { familyId: DEMO, publicKey: "00".repeat(32), action: "revoke" });
+check("no session: revoke a device -> 403 OperatorOnly", rev.status === 403 && (await err(rev)) === "OperatorOnly", String(rev.status));
+const xoAnon = await req("/api/sender/deposit", { ...J, origin: "https://evil.example" }, JSON.stringify({ familyId: DEMO, amount: "1" }));
+check("cross-origin public action -> 403 (CSRF)", xoAnon.status === 403, String(xoAnon.status));
 const bad = await req("/api/auth/login", { ...J, origin: BASE }, JSON.stringify({ code: "wrong-code-123" }));
 check("wrong access code -> 401", bad.status === 401);
 const forged = await req("/api/sender/family", { ...J, origin: BASE, cookie: "ot_demo=9999999999.forgedsignature" }, "{}");
@@ -40,6 +54,8 @@ const badJunk = await req("/api/sender/deposit", { ...J, origin: BASE, cookie },
 check("non-decimal amount -> 400", badJunk.status === 400, String(badJunk.status));
 const malformed = await req("/api/merchant/pay", { ...J, origin: BASE, cookie }, JSON.stringify({ merchantId: "A", authorization: "OTA1:{not json" }));
 check("malformed authorization -> 400, no crash", malformed.status === 400);
+const opRev = await req("/api/sender/key", { ...J, origin: BASE, cookie }, JSON.stringify({ familyId: DEMO, publicKey: "zz", action: "revoke" }));
+check("operator session: revoke reaches validation -> 400", opRev.status === 400, String(opRev.status));
 const status = await (await fetch(BASE + "/api/auth/status", { headers: { cookie } })).json();
 check("status reports authorized", status.authorized === true);
 const pub = await fetch(BASE + "/api/family/1");

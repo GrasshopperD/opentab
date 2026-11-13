@@ -3,7 +3,7 @@ import { rpc } from "@stellar/stellar-sdk";
 import { read, roleAddress, scv, tokenBalance, type Role } from "@/lib/chain.server";
 import { readLimited } from "@/lib/api.server";
 import { accessConfigured, readCookie, validSession } from "@/lib/guard.server";
-import { MERCHANTS, RPC_URL, TOKEN_ID, VAULT_ID } from "@/lib/config";
+import { DEMO_FAMILY_ID, MERCHANTS, RPC_URL, TOKEN_ID, VAULT_ID } from "@/lib/config";
 
 export const dynamic = "force-dynamic";
 
@@ -43,9 +43,9 @@ export async function GET(req: Request) {
       const f = await read(VAULT_ID, "get_family", [scv.u64(1n)]);
       return `family #1 exists, ${f.total_paid > 0n ? "has settled payments" : "no payments yet"}`;
     }),
-    run("Demo operator access enabled", async () => {
+    run("Public demo enabled", async () => {
       if (!accessConfigured()) throw new Error("DEMO_ACCESS_CODE / DEMO_SESSION_SECRET not set: signing disabled");
-      return "access code required for Sender and Shop";
+      return `Sender and Shop open without an access code (demo Family #${DEMO_FAMILY_ID})`;
     }),
   ]);
   const authorized = validSession(readCookie(req));

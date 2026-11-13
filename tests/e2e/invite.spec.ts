@@ -15,9 +15,9 @@ test("invite link -> accept with key proof -> sender approves -> Connected on St
 
   const op = await sender.newPage();
   op.on("dialog", (d) => d.accept());                                    // approve/revoke confirmations
+  const login = await sender.request.post("/api/auth/login", { data: { code: CODE }, headers: { origin: new URL(baseURL!).origin } });
+  expect(login.status(), "operator login (invitations are operator-only)").toBe(200);
   await op.goto("/sender");
-  await op.locator("#democode").fill(CODE);
-  await op.getByRole("button", { name: "Unlock demo" }).click();
   await expect(op.getByTestId("demo-family-note")).toContainText(`Family #${FAMILY}`);
   await op.getByRole("button", { name: "Pair Family Member" }).click();
   const panel = op.getByTestId("invites");

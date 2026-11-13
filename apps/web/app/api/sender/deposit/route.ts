@@ -1,5 +1,6 @@
 import { invoke, roleAddress, scv } from "@/lib/chain.server";
-import { guard } from "@/lib/guard.server";
+import { demoFamilyOnly, guard } from "@/lib/guard.server";
+import { DEMO_FAMILY_ID } from "@/lib/config";
 import { badRequest, fail, ok, parseId } from "@/lib/api.server";
 import { parseTokenAmount } from "@opentab/shared";
 
@@ -7,10 +8,11 @@ export const dynamic = "force-dynamic";
 
 export async function POST(req: Request) {
   try {
-    const g = await guard(req, { limit: 10 });
+    const g = await guard(req, { limit: 10, auth: "public" });   // public demo action: no access code
     if ("res" in g) return g.res;
     const body = g.body;
     const familyId = parseId(body.familyId);
+    if (!g.sid && familyId !== BigInt(DEMO_FAMILY_ID)) return demoFamilyOnly(DEMO_FAMILY_ID);
     const amount = parseTokenAmount(String(body.amount));
     if (amount <= 0n || amount > parseTokenAmount("50")) return badRequest("deposit must be between 0 and 50 demo USD");
     const sender = roleAddress("sender");

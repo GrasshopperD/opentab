@@ -1,9 +1,10 @@
 // SERVER-ONLY demo access control, CSRF defence, rate limiting and input limits.
 //
-// Model: an operator-chosen DEMO_ACCESS_CODE (server env) is exchanged at /api/auth/login
-// for an HMAC-signed, HttpOnly, SameSite=Strict session cookie. Every state-changing route
-// (anything that signs with a server-held Testnet key) calls `guard(req)`.
-// Fails CLOSED: if DEMO_ACCESS_CODE or DEMO_SESSION_SECRET is missing, mutations are disabled.
+// Model: every state-changing route (anything that signs with a server-held Testnet key) calls `guard(req)`.
+// PUBLIC demo actions (`auth: "public"`: fund, pair and settle on the preset demo family) need no access code; the
+// routes themselves restrict anonymous callers to that family. OPERATOR actions (`auth: true`: create family, revoke
+// a device, other families, invitations) need the session cookie that /api/auth/login issues for DEMO_ACCESS_CODE.
+// Fails CLOSED: if DEMO_ACCESS_CODE or DEMO_SESSION_SECRET is missing, ALL signing routes (public too) are disabled.
 import "server-only";
 import { createHmac, createHash, randomBytes, timingSafeEqual } from "node:crypto";
 import { NextResponse } from "next/server";
@@ -68,9 +69,13 @@ export function sameOrigin(req: Request): boolean {
 }
 
 const deny = (status: number, error: string, detail: string) => NextResponse.json({ error, detail }, { status });
+/** Anonymous public-demo callers may only fund or pair the preset demo family. */
+export const demoFamilyOnly = (id: string) => deny(403, "DemoFamilyOnly", `The public demo can only fund or pair demo Family #${id}.`);
+export const operatorOnly = (detail: string) => deny(403, "OperatorOnly", detail);
 
-/** Guard a state-changing request. Returns the parsed JSON body, or a Response to return. */
-export async function guard(req: Request, opts: { limit?: number; auth?: boolean } = {}): Promise<{ body: any; sid?: string } | { res: Response }> {
+/** Guard a state-changing request. Returns the parsed JSON body (and `sid` only for a valid operator session), or a Response.
+ *  auth: true = operator session required; "public" = open public-demo action (kill switch still applies); false = no access check. */
+export async function guard(req: Request, opts: { limit?: number; auth?: boolean | "public" } = {}): Promise<{ body: any; sid?: string } | { res: Response }> {
   const { limit = 20, auth = true } = opts;
   if (req.method !== "POST") return { res: deny(405, "MethodNotAllowed", "POST only") };
   if (!sameOrigin(req)) return { res: deny(403, "CrossOrigin", "Request must come from this site.") };
@@ -78,7 +83,7 @@ export async function guard(req: Request, opts: { limit?: number; auth?: boolean
   if (rateLimited(`m:${new URL(req.url).pathname}:${clientIp(req)}`, limit, 60_000)) return { res: deny(429, "RateLimited", "Too many requests. Wait a minute.") };
   if (auth) {
     if (!accessConfigured()) return { res: deny(503, "DemoLocked", "Interactive demo is disabled on this deployment.") };
-    if (!validSession(readCookie(req))) return { res: deny(401, "Unauthorized", "Demo access code required.") };
+    if (auth === true && !validSession(readCookie(req))) return { res: deny(401, "Unauthorized", "Operator-only action: turned off in the public demo.") };
   }
   const text = await req.text();
   if (text.length > MAX_BODY_BYTES) return { res: deny(413, "TooLarge", "Request body too large.") };

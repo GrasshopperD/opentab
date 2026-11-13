@@ -1,4 +1,5 @@
-// REAL browser + REAL Stellar Testnet. Spends demo OTUSD. Needs OT_DEMO_CODE and a running app.
+// REAL browser + REAL Stellar Testnet. Spends demo OTUSD. The full journey creates a NEW family (operator-only), so it
+// needs OT_DEMO_CODE (operator session via the API; the UI has no access-code form) and a running app.
 import { expect, test, type BrowserContext, type Page } from "@playwright/test";
 import { paste, simulateAuthorizedDevice } from "./helpers";
 
@@ -10,10 +11,10 @@ async function shot(page: Page, name: string) {
   await page.screenshot({ path: `${SHOTS}/${name}.png`, fullPage: true });
 }
 
-async function unlock(page: Page) {
-  await page.locator("#democode").fill(CODE);
-  await page.getByRole("button", { name: "Unlock demo" }).click();
-  await expect(page.getByText("Demo operator access active")).toBeVisible();
+async function operatorLogin(ctx: BrowserContext) {       // the context's request shares its cookie jar with its pages
+  const base = process.env.OT_BASE_URL ?? "http://localhost:3000";
+  const r = await ctx.request.post("/api/auth/login", { data: { code: CODE }, headers: { origin: new URL(base).origin } });
+  expect(r.status(), "operator login").toBe(200);
 }
 const merchantBalance = async (ctx: BrowserContext) => BigInt((await (await ctx.request.get("/api/merchant/A")).json()).balance);
 const familyBalance = async (ctx: BrowserContext, f: string) => BigInt((await (await ctx.request.get(`/api/family/${f}`)).json()).family.balance);
@@ -31,8 +32,8 @@ test("full journey: fund, pair, offline approve, settle on Stellar, replay rejec
   await shot(op, "01-landing");
 
   // 2. Sender creates + funds a family (real transactions)
+  await operatorLogin(operator);
   await op.goto("/sender");
-  await unlock(op);
   await op.getByText("Advanced: family management").click();
   await op.locator("#create-amount").fill("3");
   await op.getByRole("button", { name: "Create new family + fund" }).click();
@@ -82,7 +83,7 @@ test("full journey: fund, pair, offline approve, settle on Stellar, replay rejec
   // 7-8. Merchant creates an invoice
   const shop = await operator.newPage();
   await shop.goto("/shop");
-  await expect(shop.getByText("Demo operator access active")).toBeVisible();
+  await expect(shop.locator("#democode")).toHaveCount(0);                  // no access-code form on the shop
   await shop.getByRole("tab", { name: "Custom amount" }).click();
   await shop.locator('label:has-text("Price") + input').fill("20.00");
   await expect(shop.getByText("1.0857764 OTUSD", { exact: true })).toBeVisible();   // 20 MXN / 18.42, rounded up at 7 dp (recent-payments list may contain the same amount as a substring)
@@ -166,15 +167,17 @@ test("malformed and foreign codes are rejected without crashing", async ({ page,
   await expect(page.getByRole("heading", { name: /Family Wallet/ })).toBeVisible();
 });
 
-test("interactive screens require demo access", async ({ page }) => {
+test("public demo needs no access code; operator-only actions stay off (spends nothing)", async ({ page }) => {
   await page.goto("/sender");
-  await expect(page.getByText("Demo operator access")).toBeVisible();
-  await page.locator("#democode").fill("definitely-wrong");
-  await page.getByRole("button", { name: "Unlock demo" }).click();
-  await expect(page.getByText("Incorrect demo access code.")).toBeVisible();
+  await expect(page.locator("#democode")).toHaveCount(0);
+  await expect(page.getByRole("button", { name: "Add Funds" })).toBeEnabled({ timeout: 60_000 });   // after the live family read
+  await expect(page.getByRole("button", { name: "Pair Family Member" })).toBeEnabled();
   await page.getByText("Advanced: family management").click();
-  await page.getByRole("button", { name: "Create new family + fund" }).click();
-  await expect(page.getByText(/Demo access code required/)).toBeVisible();
+  await expect(page.getByRole("button", { name: "Create new family + fund" })).toBeDisabled();
+  await expect(page.getByText(/turned off in the public demo \(operator only\)/)).toBeVisible();
+  await page.goto("/shop");
+  await expect(page.locator("#democode")).toHaveCount(0);
+  await expect(page.getByRole("button", { name: "Generate Invoice QR" })).toBeEnabled();
 });
 
 for (const width of [320, 375, 390, 430, 768, 1440]) {
