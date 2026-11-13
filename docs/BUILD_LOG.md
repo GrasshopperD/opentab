@@ -5,6 +5,55 @@ Only record results that were genuinely observed. Never record a planned step as
 
 ---
 
+## 2026-11-13: Session 11, pre-publication security audit and judge README (branch `docs/public-readme` from `main` @ `1688c08`)
+
+- **Scope:** documentation only (`README.md`, this log, `NEXT_STEPS.md`). No code, contract, config, environment or Vercel
+  changes. No Testnet transactions; all chain checks used read-only simulation (`--send=no`) or Horizon reads.
+- **What was scanned:** all 22 commits on all refs: 7 remote branches, the PR refs `refs/pull/1..4/head` and local
+  branches. No tags or releases exist. That covers 320 blobs.
+- **gitleaks 8.30.1** (official release, SHA-256 checked) over full history (`--log-opts=--all`): 5 findings, all
+  `generic-api-key` on the public OTUSD/FamilyVault contract IDs (`C…` addresses) in tests, scripts and the test vector,
+  so all false positives. The working-tree scan's findings were all in git-ignored, untracked files (`apps/web/.env.local`,
+  `.data/`, `.next/`, `target/`).
+- **Own blob scan** (all reachable blobs plus commit messages):
+  - Found 0 checksum-valid Stellar secret seeds.
+  - Found 0 matches of the 10 real local secrets: the 5 server-only `.env.local` values and the 5 Stellar CLI identities.
+    Each was also checked in raw hex and base64 form.
+  - Found 0 PEM keys and 0 GitHub, AWS, Slack, OpenAI/Anthropic or Vercel-style tokens.
+  - The two "assigned secret" pattern hits were an empty template value followed by a newline, and a
+    `secret: Uint8Array` type.
+- **Test vector:** `packages/shared/vectors/payment_v1.json` contains only a public key, a message and a signature. It
+  was made from the deliberately public seed of 32 bytes of `0x07`. `is_key_active` for that key returned `false` on all
+  12 existing families.
+- **No committed `.env` files with values.** `.env.example` has empty secret fields in every version. `references/`
+  (organizer material) was never committed.
+- **Screenshots** (`submission/screenshots/*`): reviewed visually. They show only public keys, single-use approvals and
+  transaction hashes.
+- **GitHub-side content:** 4 PRs and 4 `vercel[bot]` comments, with no secrets. There are 0 Actions workflows or runs,
+  repository secrets or variables, releases, deploy keys or webhooks. All 7 PR preview aliases redirect to Vercel SSO
+  (HTTP 302).
+- **Result: PASS.** Commit metadata includes the author name and e-mail of two contributors. These will be visible once
+  the repository is public; that is not a credential.
+- **Facts checked for the README:**
+  - Token `name` is `OTUSD:GCZDLLF3…RCAY`, `symbol` is `OTUSD`, `decimals` is `7`.
+  - Vault `config.token` is `CC6JPD3N…PL73`.
+  - Horizon reports `successful: true` for the deploy transaction (`86f91a10…`), the key registration (`0a25bee9…`) and
+    payments `0b8d72ed…`, `009cc536…` and `e42405a8…`.
+  - `cargo test --locked`: FamilyVault 34 passed, OfflineChannel 24 passed.
+  - `npm test`: 20 and 23 passed.
+  - Production `/api/auth/status` returns `enabled: true`, and invitation creation returns 503.
+  - `npm audit --omit=dev`: 1 high and 1 moderate advisory, both PostCSS through Next. The fix is Next 16.
+- **README rewritten for judges:**
+  - What we built, the problem and the solution.
+  - The Sender → Family → Merchant → Stellar flow, with a diagram.
+  - Why an offline approval is not settlement.
+  - Verified contract and token IDs, and on-chain evidence.
+  - Architecture and stack.
+  - The live app, and Demo Mode vs Product Mode.
+  - Accurate setup, environment and test commands, including which tests spend Testnet tokens.
+  - Security considerations and limitations.
+  - A clearly marked demo-video placeholder.
+
 ## 2026-11-13: Session 10, Demo Mode as the default judge experience (branch `release/demo-default` from `main` @ `213e496`)
 
 - **Change:** `/` now redirects (HTTP 307, `redirect()` in `app/page.tsx`) to `/demo` on every domain of the project;

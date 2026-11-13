@@ -13,6 +13,9 @@ Items marked **[USER]** need the user to do or approve something.
 - [x] `ui-demo-catalog` (PR #1) and `demo-ui-polish` (PR #2) merged; production `opentabglobal` deployed from main `ca9dece` (session 8). `INVITES_ENABLED` unset on Vercel.
 - [x] Two-mode release (session 9, PR #3, main `213e496`): Demo Mode | Product Mode switch, Product Mode as a read-only showcase of live Family #7 data. Production verified (BUILD_LOG).
 - [x] Root `/` opens Demo Mode with a judge introduction (session 10, branch `release/demo-default`).
+- [x] Full-history secret audit PASS and judge-facing README (session 11, branch `docs/public-readme`; see BUILD_LOG).
+- [ ] **[USER]** Add the public demo-video link to the README "Demo video" section once it is recorded.
+- [ ] Optional: `submission/RELEASE_LINKS.md` still shows the GitHub and Vercel rows as "TBD" (written before deployment); left unchanged because it is a submission file.
 - [ ] Confirm the new short production domain in the Vercel dashboard (the CLI account has no access to team `open-tab1`).
 - [ ] Later (not in this release): fuller Product Mode backend integration is preserved on `feat/product-backend-integration` (`494b802`, tests incomplete).
 - [ ] Before the demo: open the deployed site online on the demo phone once (updates the cached app so it signs item lists); re-pair the phone to Family #7 via manual pairing.
